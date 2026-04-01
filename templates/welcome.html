@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎来到 MAY</title>
+    <!-- 引用静态 CSS 文件 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>欢迎来到 MAY</h1>
+            <p>探索无限可能，开启你的专属体验。</p>
+        </header>
+
+        <main>
+            <div class="features">
+                <div class="feature-item">
+                    <h3>🚀 快速启动</h3>
+                    <p>基于 Flask 构建，轻量且高效。</p>
+                </div>
+                <div class="feature-item">
+                    <h3>🎨 精美设计</h3>
+                    <p>简洁的界面，专注于内容展示。</p>
+                </div>
+                <div class="feature-item">
+                    <h3>🔒 安全可靠</h3>
+                    <p>为你的数据提供坚实的保障。</p>
+                </div>
+            </div>
+
+            <div class="login-entry">
+                <p>已有账号？请登录以访问更多功能。</p>
+                <!-- 登录按钮链接到 /login 路由 -->
+                <a href="{{ url_for('login') }}" class="login-btn">进入登录</a>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 MAY. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
