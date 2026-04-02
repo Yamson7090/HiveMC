@@ -1,111 +1,223 @@
-/* 全局样式重置 */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+/* 全局设置 */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #333;
-    min-height: 100vh;
+    font-family: 'Roboto Mono', monospace; /* 使用等宽字体，更有代码感 */
+    background-color: #0d1117; /* GitHub 深色风格 */
+    color: #c9d1d9;
+    line-height: 1.6;
+}
+
+a { text-decoration: none; color: inherit; }
+
+/* 导航栏 */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+}
+
+.logo {
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
+    color: #58a6ff; /* 科技蓝 */
+}
+
+.sub { color: #8b949e; font-size: 1rem; vertical-align: bottom; }
+
+.nav-right { display: flex; gap: 20px; align-items: center; }
+
+.status-badge {
+    font-size: 0.8rem;
+    color: #3fb950;
+    border: 1px solid #3fb950;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.btn-apply {
+    background: #238636;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.btn-apply:hover { background: #2ea043; }
+
+/* 英雄区域 */
+.hero {
+    text-align: center;
+    padding: 80px 20px;
+    background: radial-gradient(circle at center, #1f2428 0%, #0d1117 70%);
+}
+
+.hero h1 {
+    font-family: 'VT323', monospace;
+    font-size: 4rem;
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+.hero p { color: #8b949e; margin-bottom: 40px; }
+
+.actions { display: flex; gap: 20px; justify-content: center; }
+
+.btn-primary {
+    background: #1f6feb;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.btn-secondary {
+    border: 1px solid #30363d;
+    padding: 12px 24px;
+    border-radius: 6px;
+}
+
+.btn-secondary:hover { border-color: #8b949e; }
+
+/* 服务器列表 */
+.server-list-section { padding: 60px 20px; max-width: 800px; margin: 0 auto; }
+
+h2 {
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    border-left: 4px solid #58a6ff;
+    padding-left: 15px;
+}
+
+.server-grid { display: flex; flex-direction: column; gap: 15px; }
+
+.server-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.server-card:hover { transform: translateY(-2px); border-color: #58a6ff; }
+
+.card-header {
+    padding: 15px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.running { background: #3fb950; box-shadow: 0 0 5px #3fb950; }
+.stopped { background: #8b949e; }
+
+.server-name { font-weight: bold; color: #fff; }
+
+.card-body { padding: 15px; font-size: 0.9rem; color: #8b949e; }
+.status-text { color: #58a6ff; }
+
+.card-footer { padding: 10px 15px; background: #0d1117; text-align: right; }
+
+.card-footer button {
+    background: transparent;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.card-footer button:hover { background: #21262d; }
+
+/* 统计数据 */
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    padding: 40px;
+    background: #161b22;
+    border-top: 1px solid #30363d;
+}
+
+.stat-item { text-align: center; }
+.stat-item h3 { font-family: 'VT323', monospace; font-size: 2rem; color: #58a6ff; }
+.stat-item p { font-size: 0.8rem; color: #8b949e; }
+
+footer { text-align: center; padding: 20px; font-size: 0.8rem; color: #484f58; }
+
+/* --- 登录页专用样式 --- */
+.login-body {
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100vh;
+    background: radial-gradient(circle at center, #1f2428 0%, #0d1117 100%);
 }
 
-.container {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    max-width: 800px;
-    width: 90%;
+.login-box {
+    background: #161b22;
+    border: 1px solid #30363d;
     padding: 40px;
-    text-align: center;
-    animation: fadeIn 0.8s ease-out;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
-/* 动画效果 */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+.login-header { text-align: center; margin-bottom: 30px; }
+.login-header h1 { font-family: 'VT323', monospace; font-size: 3rem; color: #fff; }
+.accent { color: #58a6ff; }
 
-header h1 {
-    font-size: 3rem;
-    color: #764ba2;
-    margin-bottom: 10px;
-    letter-spacing: 2px;
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; margin-bottom: 8px; color: #8b949e; font-size: 0.9rem; }
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #fff;
+    border-radius: 6px;
+    font-family: 'Roboto Mono', monospace;
 }
+.input-group input:focus { outline: none; border-color: #58a6ff; }
 
-header p {
-    font-size: 1.2rem;
-    color: #666;
-    margin-bottom: 40px;
-}
-
-/* 特性展示区域 */
-.features {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    margin-bottom: 40px;
-}
-
-.feature-item {
-    flex: 1;
-    min-width: 200px;
-    padding: 20px;
-    margin: 10px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    transition: transform 0.3s ease;
-}
-
-.feature-item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.feature-item h3 {
-    color: #667eea;
-    margin-bottom: 10px;
-}
-
-/* 登录入口区域 */
-.login-entry {
-    padding: 30px;
-    background: #f0f2f5;
-    border-radius: 10px;
-    border: 1px solid #e1e4e8;
-}
-
-.login-entry p {
-    margin-bottom: 20px;
-    font-size: 1.1rem;
-}
-
-.login-btn {
-    display: inline-block;
-    padding: 12px 30px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    text-decoration: none;
-    border-radius: 25px;
+.btn-submit {
+    width: 100%;
+    padding: 12px;
+    background: #238636;
+    border: none;
+    color: #fff;
     font-weight: bold;
-    font-size: 1.1rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Roboto Mono', monospace;
 }
+.btn-submit:hover { background: #2ea043; }
 
-.login-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(118, 75, 162, 0.6);
-}
+.login-footer { text-align: center; margin-top: 20px; font-size: 0.8rem; }
+.login-footer a { color: #8b949e; }
+.login-footer a:hover { color: #fff; }
 
-footer {
-    margin-top: 30px;
-    color: #888;
-    font-size: 0.9rem;
-}
+/* 消息提示框 */
+.flashes { list-style: none; margin-bottom: 20px; }
+.flashes li { padding: 10px; border-radius: 4px; font-size: 0.9rem; text-align: center; }
+.error { background: rgba(248, 81, 73, 0.2); color: #ff7b72; border: 1px solid #ff7b72; }
+.success { background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #3fb950; }
+
+/* 导航栏状态微调 */
+.welcome-text { color: #58a6ff; margin-right: 15px; }
+.btn-logout { background: #da3633; }
+.btn-logout:hover { background: #f85149; }
