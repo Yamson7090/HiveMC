@@ -4,13 +4,14 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
+from definitions import load_config
+
 # 读取配置文件
-with open('config.yml', 'r') as f:
-    config = yaml.safe_load(f)
+config = load_config()
 
 app = Flask(__name__)
-app.secret_key = 'sjhkSBVDhzsdgvilasyglvaughr'  # 用于会话加密
-server_port = 5000
+app.secret_key = config['server']['secret_key']
+server_port = config['server']['port']
 
 @app.route("/")
 def home():

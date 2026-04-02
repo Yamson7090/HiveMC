@@ -5,10 +5,14 @@ server:
   debug: false
   secret_key: "secret_key" # Flask 会话加密密钥
 
-# mysql数据库配置
+# 数据库配置
 database:
-  host: "127.0.0.1"
-  port: 3306
-  user: "user"          # 你的 MySQL 用户名
-  password: "password"  # 你的 MySQL 密码
-  name: "may_platform"  # 你的数据库名
+  choose: "sqlite"  # 可选项：mysql、sqlite
+  sqlite:
+    db_path: "users.db"  # SQLite 数据库文件路径
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    user: "user"          # 你的 MySQL 用户名
+    password: "password"  # 你的 MySQL 密码
+    name: "may_platform"  # 你的数据库名
