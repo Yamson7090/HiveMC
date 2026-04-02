@@ -1,0 +1,14 @@
+# config.yml
+# 服务配置
+server:
+  port: 5000
+  debug: true           # 开发时设为 true，上线后改为 false
+  secret_key: "secret_key" # Flask 会话加密密钥
+
+# 数据库配置
+database:
+  host: "127.0.0.1"
+  port: 3306
+  user: "root"          # 你的 MySQL 用户名
+  password: "root"  # 你的 MySQL 密码
+  name: "may_platform"  # 你的数据库名

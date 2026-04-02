@@ -1,5 +1,12 @@
+import yaml
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
+# 读取配置文件
+with open('config.yml', 'r') as f:
+    config = yaml.safe_load(f)
 
 app = Flask(__name__)
 app.secret_key = 'sjhkSBVDhzsdgvilasyglvaughr'  # 用于会话加密
