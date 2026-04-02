@@ -218,6 +218,242 @@ footer { text-align: center; padding: 20px; font-size: 0.8rem; color: #484f58; }
 .success { background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #3fb950; }
 
 /* 导航栏状态微调 */
-.welcome-text { color: #58a6ff; margin-right: 15px; }
-.btn-logout { background: #da3633; }
+.welcome-text { color: #58a6ff; margin-right: 15px; font-size: 0.9rem; }
+.btn-logout { 
+    background: #da3633; 
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: 0.2s;
+}
 .btn-logout:hover { background: #f85149; }
+.btn-login {
+    background: #238636;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: 0.2s;
+}
+.btn-login:hover { background: #2ea043; }
+
+/* 服务器卡片网格布局优化 */
+.server-list-section { padding: 60px 20px; max-width: 1200px; margin: 0 auto; }
+
+.server-grid { 
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+/* 容器样式 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 统计数据区域优化 */
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    padding: 60px 20px;
+    background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+    border-top: 1px solid #30363d;
+    border-bottom: 1px solid #30363d;
+}
+
+.stat-item { 
+    text-align: center;
+    padding: 20px 40px;
+    background: #0d1117;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+}
+.stat-item h3 { 
+    font-family: 'VT323', monospace; 
+    font-size: 2.5rem; 
+    color: #58a6ff;
+    margin-bottom: 8px;
+}
+.stat-item p { 
+    font-size: 0.9rem; 
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* 页脚优化 */
+footer { 
+    text-align: center; 
+    padding: 30px 20px;
+    font-size: 0.9rem; 
+    color: #484f58;
+    background: #0d1117;
+}
+
+/* 英雄区域优化 */
+.hero {
+    text-align: center;
+    padding: 100px 20px;
+    background: radial-gradient(circle at center, #1f2428 0%, #0d1117 70%);
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero h1 {
+    font-family: 'VT323', monospace;
+    font-size: 5rem;
+    color: #fff;
+    margin-bottom: 20px;
+    text-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+}
+
+.hero p { 
+    color: #8b949e; 
+    margin-bottom: 40px;
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.actions { 
+    display: flex; 
+    gap: 20px; 
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    background: #1f6feb;
+    color: #fff;
+    padding: 14px 32px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+}
+
+.btn-primary:hover { 
+    background: #388bfd;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(31, 111, 235, 0.4);
+}
+
+.btn-secondary {
+    border: 1px solid #30363d;
+    padding: 14px 32px;
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover { 
+    border-color: #58a6ff;
+    color: #58a6ff;
+}
+
+/* 服务器卡片优化 */
+.server-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.server-card:hover { 
+    transform: translateY(-4px); 
+    border-color: #58a6ff;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.card-header {
+    padding: 18px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.running { 
+    background: #3fb950; 
+    box-shadow: 0 0 8px #3fb950;
+}
+
+.stopped { 
+    background: #8b949e;
+}
+
+.server-name { 
+    font-weight: bold; 
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.card-body { 
+    padding: 18px;
+    font-size: 0.95rem;
+    color: #8b949e;
+}
+
+.card-body p {
+    margin-bottom: 10px;
+}
+
+.card-body p:last-child {
+    margin-bottom: 0;
+}
+
+.status-text { 
+    color: #58a6ff;
+    font-weight: 500;
+}
+
+.card-footer { 
+    padding: 12px 18px;
+    background: #0d1117;
+    text-align: right;
+}
+
+.card-footer button {
+    background: #238636;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.card-footer button:hover { 
+    background: #2ea043;
+    transform: translateY(-1px);
+}
+
+/* 标题优化 */
+h2 {
+    font-family: 'VT323', monospace;
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+    border-left: 4px solid #58a6ff;
+    padding-left: 20px;
+    color: #fff;
+}
