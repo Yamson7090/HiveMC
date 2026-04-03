@@ -208,3 +208,4 @@ __marimo__/
 
 # 忽略配置文件，防止密码泄露
 config.yml
+users.db

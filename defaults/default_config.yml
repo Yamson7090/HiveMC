@@ -7,7 +7,7 @@ server:
 
 # 数据库配置
 database:
-  choose: "sqlite"  # 可选项：mysql、sqlite
+  type: "sqlite"  # 可选项：mysql、sqlite
   sqlite:
     db_path: "users.db"  # SQLite 数据库文件路径
   mysql:

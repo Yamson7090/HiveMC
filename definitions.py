@@ -15,21 +15,28 @@ def load_config():
         print("❌ 错误：找不到 config.yml 文件，已重新生成默认配置，请根据文件内容进行修改。")
         exit(1)
 
-def sqlite_ready(db_name='users.db'):
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            if_admin INTEGER DEFAULT 0,
-            servers TEXT
-        )
-    ''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+config = load_config()
+
+if config['database']['type'] == 'sqlite':
+
+    def sqlite_ready(db_name='users.db'):
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                if_admin INTEGER DEFAULT 0,
+                servers TEXT
+            )
+        ''')
+        if not cursor.execute("SELECT * FROM users WHERE username='admin'").fetchone():
+            add_user('admin', '123456', if_admin=1, db_name=db_name)
+        conn.commit()
+        cursor.close()
+        conn.close()
+
     def add_user(username, password, if_admin=0, db_name='users.db'):
         password_hash = generate_password_hash(password)
         conn = sqlite3.connect(db_name)
@@ -45,40 +52,52 @@ def sqlite_ready(db_name='users.db'):
         finally:
             cursor.close()
             conn.close()
+    
 
+    def login(username, password, db_name='users.db'):
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+        cursor.execute('SELECT password_hash FROM users WHERE username=?', (username,))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if result and check_password_hash(result[0], password):
+            return True
+        return False
 
-"""MySQL 数据库连接"""
-def mysql_ready():
-    config = load_config()
-    db_user = config['database']['user']
-    db_pass = config['database']['password']
-    db_host = config['database']['host']
-    db_port = config['database']['port']
-    db_name = config['database']['name']
+elif config['database']['type'] == 'mysql':
+    """MySQL 数据库连接"""
+    def mysql_ready():
+        config = load_config()
+        db_user = config['database']['user']
+        db_pass = config['database']['password']
+        db_host = config['database']['host']
+        db_port = config['database']['port']
+        db_name = config['database']['name']
 
-    # 拼接连接字符串
-    database_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+        # 拼接连接字符串
+        database_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # 初始化数据库
-    db = SQLAlchemy(app)
+        # 初始化数据库
+        db = SQLAlchemy(app)
 
     # --- 4. 定义模型 (User) ---
-    class User(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        username = db.Column(db.String(50), unique=True, nullable=False)
-        password_hash = db.Column(db.String(128), nullable=False)
+        class User(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+            username = db.Column(db.String(50), unique=True, nullable=False)
+            password_hash = db.Column(db.String(128), nullable=False)
 
-        def set_password(self, password):
-            self.password_hash = generate_password_hash(password)
+            def set_password(self, password):
+                self.password_hash = generate_password_hash(password)
 
-        def check_password(self, password):
-            return check_password_hash(self.password_hash, password)
+            def check_password(self, password):
+                return check_password_hash(self.password_hash, password)
 
     # --- 5. 路由与初始化 ---
-    def init_db():
+    
         with app.app_context():
             db.create_all()
             if not User.query.filter_by(username='admin').first():

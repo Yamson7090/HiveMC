@@ -4,10 +4,18 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
-from definitions import load_config
-
 # 读取配置文件
 config = load_config()
+
+if config['database']['type'] == 'sqlite':
+    from definitions import sqlite_ready, login
+    sqlite_ready()
+elif config['database']['type'] == 'mysql':
+    from definitions import mysql_ready, login
+    mysql_ready()
+else:
+    print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
+    exit(1)
 
 app = Flask(__name__)
 app.secret_key = config['server']['secret_key']
@@ -26,22 +34,15 @@ def home():
     return render_template('index.html', servers=active_servers, user=current_user, info=None)
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def login_page():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # 1. 检查用户是否存在
-        if username in users_db:
-            # 2. 验证密码哈希
-            if check_password_hash(users_db[username], password):
-                session['username'] = username
-                flash('登录成功！欢迎回来，' + username, 'success')
-                return redirect(url_for('index'))
-            else:
-                flash('密码错误', 'error')
-        else:
-            flash('用户不存在', 'error')
+        if login(username, password):
+            session['username'] = username
+            flash('登录成功！', 'success')
+            return redirect(url_for('backend'))
             
     return render_template('login.html')
 
