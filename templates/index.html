@@ -19,7 +19,7 @@
                 <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
             {% else %}
                 <!-- 未登录状态 -->
-                <a href="{{ url_for('login') }}" class="btn-login">登录</a>
+                <a href="{{ url_for('login_page') }}" class="btn-login">登录</a>
             {% endif %}
         </div>
     </nav>
@@ -31,7 +31,7 @@
             <p>这是一个非盈利的 Minecraft 共享开服平台<br>专为朋友们打造的方块乐园</p>
             
             <div class="actions">
-                <a href="{{ url_for('login') }}" class="btn-primary">我要开服</a>
+                <a href="{{ url_for('login_page') }}" class="btn-primary">我要开服</a>
                 <a href="#" class="btn-secondary">查看文档</a>
             </div>
         </div>
@@ -78,7 +78,7 @@
     </section>
 
     <footer>
-        <p>Powered by MAY | Made with ️ for Friends</p>
+        <p>Powered by MAY | Made with Lixuehua for Friends</p>
     </footer>
 
 </body>

@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
+from definitions import load_config
+
 # 读取配置文件
 config = load_config()
 
@@ -22,9 +24,13 @@ app.secret_key = config['server']['secret_key']
 server_port = config['server']['port']
 
 @app.route("/")
-def home():
+def index():
     # 检查是否登录
     current_user = session.get('username')
+    if current_user:
+        flash(f"欢迎回来，{current_user}！", 'success')
+    elif current_user is None:
+        flash("欢迎访问 Minecraft 服务器控制面板！请登录以管理您的服务器。", 'info')
     
     # 模拟服务器列表
     active_servers = [
@@ -49,20 +55,11 @@ def login_page():
 @app.route('/backend')
 def backend():
     # 检查是否登录
-    #if 'username' not in session:
-    #    flash('请先登录', 'error')
-    #    return redirect(url_for('login'))
-
-    # 模拟用户数据
-    user = {
-        #'username': session['username'],
-        'username': 'username',
-        'role': '管理员',
-        'created_at': '2024-01-01',
-        'points': 1000,
-        'server_count': 2,
-        'total_cost': 500
-    }
+    if session.get('username') is None:
+        flash('请先登录', 'error')
+        return redirect(url_for('login_page'))
+    else :
+        user = {'username': session['username']}
 
     # 模拟公告数据
     announcements = [
