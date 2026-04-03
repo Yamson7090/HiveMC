@@ -10,10 +10,10 @@ from definitions import load_config
 config = load_config()
 
 if config['database']['type'] == 'sqlite':
-    from definitions import sqlite_ready, login
+    from definitions import sqlite_ready, login, add_user
     sqlite_ready()
 elif config['database']['type'] == 'mysql':
-    from definitions import mysql_ready, login
+    from definitions import mysql_ready, login, add_user
     mysql_ready()
 else:
     print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
@@ -51,6 +51,37 @@ def login_page():
             return redirect(url_for('backend'))
             
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register_page():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        # 验证输入
+        if not username or not password:
+            flash('用户名和密码不能为空', 'error')
+            return render_template('register.html')
+
+        if password != confirm_password:
+            flash('两次输入的密码不一致', 'error')
+            return render_template('register.html')
+
+        if len(password) < 6:
+            flash('密码长度至少为6位', 'error')
+            return render_template('register.html')
+
+        # 添加用户到数据库
+        try:
+            add_user(username, password)
+            flash('注册成功！请登录', 'success')
+            return redirect(url_for('login_page'))
+        except Exception as e:
+            flash('注册失败，用户名可能已存在', 'error')
+            return render_template('register.html')
+
+    return render_template('register.html')
 
 @app.route('/backend')
 def backend():

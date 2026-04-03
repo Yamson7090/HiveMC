@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>登录 - MAY 平台</title>
+    <title>注册 - MAY 平台</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,8 +11,8 @@
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <h1>MAY <span class="accent">LOGIN</span></h1>
-                <p>请输入你的管理员凭证</p>
+                <h1>MAY <span class="accent">REGISTER</span></h1>
+                <p>创建新账户</p>
             </div>
 
             <!-- 显示错误/成功信息 -->
@@ -26,7 +26,7 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="POST" action="/login">
+            <form method="POST" action="/register">
                 <div class="input-group">
                     <label>用户名</label>
                     <input type="text" name="username" placeholder="请输入用户名" required autocomplete="off">
@@ -35,13 +35,15 @@
                     <label>密码</label>
                     <input type="password" name="password" placeholder="请输入密码" required>
                 </div>
-                <button type="submit" class="btn-submit">接入系统</button>
+                <div class="input-group">
+                    <label>确认密码</label>
+                    <input type="password" name="confirm_password" placeholder="请再次输入密码" required>
+                </div>
+                <button type="submit" class="btn-submit">注册账户</button>
             </form>
-            
+
             <div class="login-footer">
-                <a href="/">← 返回首页</a>
-                <span style="margin: 0 10px;">|</span>
-                <a href="/register">注册新账户 →</a>
+                <a href="/login">已有账户？去登录 →</a>
             </div>
         </div>
     </div>
