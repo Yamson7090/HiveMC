@@ -1,5 +1,8 @@
 import yaml
 import sqlite3
+import pymysql
+from sqlalchemy import Column, Integer, String
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def load_config():
@@ -69,6 +72,7 @@ elif config['database']['type'] == 'mysql':
     """MySQL 数据库连接"""
     def mysql_ready():
         config = load_config()
+        
         db_user = config['database']['user']
         db_pass = config['database']['password']
         db_host = config['database']['host']
@@ -77,7 +81,13 @@ elif config['database']['type'] == 'mysql':
 
         # 拼接连接字符串
         database_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
-        return database_uri
+        engine = SQLAlchemy.create_engine(database_uri, pool_pre_ping=True, echo=False)
+        Session = SQLAlchemy.orm.sessionmaker(bind=engine)
+        db_session = SQLAlchemy.orm.scoped_session(Session)
+        Base = SQLAlchemy.ext.declarative.declarative_base()
+        Base.query = db_session.query_property() # 为 Base 添加 query 属性，方便查询
+
+        return db_session, engine, Base
 else:
     print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
     exit(1)

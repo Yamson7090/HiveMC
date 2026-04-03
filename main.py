@@ -1,6 +1,4 @@
-import yaml
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
@@ -14,7 +12,7 @@ if config['database']['type'] == 'sqlite':
     sqlite_ready()
 elif config['database']['type'] == 'mysql':
     from definitions import mysql_ready, login, add_user
-    mysql_ready()
+    
 else:
     print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
     exit(1)
