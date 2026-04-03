@@ -45,6 +45,58 @@ def login():
             
     return render_template('login.html')
 
+@app.route('/backend')
+def backend():
+    # 检查是否登录
+    #if 'username' not in session:
+    #    flash('请先登录', 'error')
+    #    return redirect(url_for('login'))
+
+    # 模拟用户数据
+    user = {
+        #'username': session['username'],
+        'username': 'username',
+        'role': '管理员',
+        'created_at': '2024-01-01',
+        'points': 1000,
+        'server_count': 2,
+        'total_cost': 500
+    }
+
+    # 模拟公告数据
+    announcements = [
+        {
+            'title': '系统维护通知',
+            'date': '2024-01-15',
+            'content': '系统将于本周六凌晨2:00-4:00进行维护升级，届时服务可能短暂中断，请提前做好准备。'
+        },
+        {
+            'title': '新功能上线',
+            'date': '2024-01-10',
+            'content': '我们很高兴地宣布，新的服务器控制面板功能已上线！现在您可以更方便地管理您的服务器。'
+        }
+    ]
+
+    # 模拟用户服务器数据
+    user_servers = [
+        {
+            'name': '阿明的生存服',
+            'version': '1.20.1',
+            'port': '25565',
+            'status': 'running',
+            'players': '5/20'
+        },
+        {
+            'name': 'PVP 竞技场',
+            'version': '1.19.4',
+            'port': '25566',
+            'status': 'stopped',
+            'players': '0/10'
+        }
+    ]
+
+    return render_template('backend.html', user=user, announcements=announcements, user_servers=user_servers)
+
 @app.route('/logout')
 def logout():
     session.pop('username', None)

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理 - MAY 平台</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <div class="logo">MAY <span class="sub">PANEL</span></div>
+        <div class="nav-right">
+            <span class="welcome-text">Hi, {{ user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="dashboard">
+        <div class="dashboard-container">
+
+            <!-- 用户信息和资产区域 -->
+            <div class="dashboard-header">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <span>{{ user.username[0]|upper }}</span>
+                    </div>
+                    <div class="user-details">
+                        <h2>{{ user.username }}</h2>
+                        <p class="user-role">{{ user.role|default('管理员') }}</p>
+                        <p class="user-joined">加入时间: {{ user.created_at|default('2024-01-01') }}</p>
+                    </div>
+                </div>
+
+                <div class="assets-card">
+                    <div class="asset-item">
+                        <h3>{{ user.points|default(0) }}</h3>
+                        <p>可用积分</p>
+                    </div>
+                    <div class="asset-item">
+                        <h3>{{ user.server_count|default(0) }}</h3>
+                        <p>服务器数量</p>
+                    </div>
+                    <div class="asset-item">
+                        <h3>{{ user.total_cost|default(0) }}</h3>
+                        <p>累计消耗</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 服务器列表区域 -->
+            <section class="servers-section">
+                <div class="section-header">
+                    <h2>🎮 我的服务器</h2>
+                    <a href="#" class="btn-create-server">+ 创建新服务器</a>
+                </div>
+
+                <div class="server-grid">
+                    {% for server in user_servers %}
+                    <div class="server-card">
+                        <div class="card-header">
+                            <span class="status-dot {{ server.status }}"></span>
+                            <span class="server-name">{{ server.name }}</span>
+                        </div>
+                        <div class="card-body">
+                            <p>版本: <span class="version-text">{{ server.version }}</span></p>
+                            <p>端口: <span class="port-text">{{ server.port }}</span></p>
+                            <p>玩家: <span class="status-text">{{ server.players }}</span></p>
+                            <p>状态: <span class="status-badge {{ server.status }}">{{ server.status|upper }}</span></p>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn-manage">管理</button>
+                            <button class="btn-console">控制台</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            
+            <!-- 公告区域 -->
+            <section class="announcements-section">
+                <h2>📢 系统公告</h2>
+                <div class="announcement-list">
+                    {% for announcement in announcements %}
+                    <div class="announcement-card">
+                        <div class="announcement-header">
+                            <span class="announcement-title">{{ announcement.title }}</span>
+                            <span class="announcement-date">{{ announcement.date }}</span>
+                        </div>
+                        <p class="announcement-content">{{ announcement.content }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer>
+        <p>Powered by MAY | Made with ❤️ for Friends</p>
+    </footer>
+
+</body>
+</html>

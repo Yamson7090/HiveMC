@@ -121,8 +121,8 @@ h2 {
     display: inline-block;
 }
 
-.running { background: #3fb950; box-shadow: 0 0 5px #3fb950; }
-.stopped { background: #8b949e; }
+.running { background: #3fb950; box-shadow: 0 0 5px #3fb950; color: #0d1117 }
+.stopped { background: #8b949e; color: #f85149; border: 1px solid #f85149; }
 
 .server-name { font-weight: bold; color: #fff; }
 
@@ -456,4 +456,246 @@ h2 {
     border-left: 4px solid #58a6ff;
     padding-left: 20px;
     color: #fff;
+}
+
+/* 后台管理页面样式 */
+.dashboard {
+    min-height: calc(100vh - 200px);
+    padding: 40px 20px;
+    background: #0d1117;
+}
+
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* 顶部区域布局 */
+.dashboard-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+/* 用户信息卡片 */
+.user-info-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 30px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #58a6ff 0%, #1f6feb 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'VT323', monospace;
+    font-size: 2.5rem;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+}
+
+.user-details h2 {
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
+    margin-bottom: 8px;
+    border: none;
+    padding: 0;
+    color: #fff;
+}
+
+.user-role {
+    color: #58a6ff;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.user-joined {
+    color: #8b949e;
+    font-size: 0.85rem;
+}
+
+/* 资产卡片 */
+.assets-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 30px;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.asset-item {
+    text-align: center;
+    padding: 20px;
+    background: #0d1117;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    min-width: 150px;
+}
+
+.asset-item h3 {
+    font-family: 'VT323', monospace;
+    font-size: 3rem;
+    color: #58a6ff;
+    margin-bottom: 10px;
+}
+
+.asset-item p {
+    color: #8b949e;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* 公告区域 */
+.announcements-section {
+    margin-bottom: 50px;
+}
+
+.announcement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.announcement-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s;
+}
+
+.announcement-card:hover {
+    border-color: #58a6ff;
+    transform: translateX(5px);
+}
+
+.announcement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.announcement-title {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.announcement-date {
+    color: #8b949e;
+    font-size: 0.85rem;
+}
+
+.announcement-content {
+    color: #c9d1d9;
+    line-height: 1.6;
+}
+
+/* 服务器列表区域 */
+.servers-section {
+    margin-bottom: 50px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    margin-bottom: 0;
+    border: none;
+    padding: 0;
+}
+
+.btn-create-server {
+    background: #238636;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.btn-create-server:hover {
+    background: #2ea043;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(35, 134, 54, 0.3);
+}
+
+/* 服务器卡片按钮 */
+.card-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-manage {
+    background: #1f6feb;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.btn-manage:hover {
+    background: #388bfd;
+    transform: translateY(-1px);
+}
+
+.btn-console {
+    background: transparent;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.btn-console:hover {
+    border-color: #58a6ff;
+    color: #58a6ff;
+}
+
+.version-text,
+.port-text {
+    color: #c9d1d9;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .dashboard-header {
+        grid-template-columns: 1fr;
+    }
+
+    .assets-card {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .section-header {
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+    }
 }
