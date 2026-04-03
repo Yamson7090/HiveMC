@@ -77,32 +77,7 @@ elif config['database']['type'] == 'mysql':
 
         # 拼接连接字符串
         database_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
-
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-        # 初始化数据库
-        db = SQLAlchemy(app)
-
-    # --- 4. 定义模型 (User) ---
-        class User(db.Model):
-            id = db.Column(db.Integer, primary_key=True)
-            username = db.Column(db.String(50), unique=True, nullable=False)
-            password_hash = db.Column(db.String(128), nullable=False)
-
-            def set_password(self, password):
-                self.password_hash = generate_password_hash(password)
-
-            def check_password(self, password):
-                return check_password_hash(self.password_hash, password)
-
-    # --- 5. 路由与初始化 ---
-    
-        with app.app_context():
-            db.create_all()
-            if not User.query.filter_by(username='admin').first():
-                admin = User(username='admin')
-                admin.set_password('123456')
-                db.session.add(admin)
-                db.session.commit()
-                print("✅ 数据库已连接并初始化完成")
+        return database_uri
+else:
+    print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
+    exit(1)
