@@ -60,7 +60,7 @@ def read_mc_output():
         # 进程结束后的处理
         output_queue.put("[系统] Minecraft 服务端已关闭。")
 
-def start_server(MC_START_CMD):
+def start_server(MC_START_CMD, server_id):
     """启动 Minecraft 服务端"""
     global mc_process
     if mc_process and mc_process.poll() is None:
@@ -74,13 +74,14 @@ def start_server(MC_START_CMD):
             stdin=subprocess.PIPE, 
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, # 将错误输出也合并到标准输出
+            cwd=os.path.join(os.getcwd(), os.path.join("servers", server_id)),
             bufsize=1
         )
         
         # 启动读取线程
         thread = threading.Thread(target=read_mc_output, daemon=True)
         thread.start()
-        return "服务端启动指令已发送..."
+        return mc_process.pid
     except Exception as e:
         return f"启动失败: {str(e)}"
 
