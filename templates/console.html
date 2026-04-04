@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>MAY - 远程控制台</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">MAY <span class="sub">CONSOLE</span></div>
+        <div class="nav-right">
+            <span>用户: {{ user }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+        </div>
+    </nav>
+
+    <div class="console-container">
+        <!-- 顶部控制栏 -->
+        <div class="console-header">
+            <button id="btn-start" class="btn-action">启动服务端</button>
+            <span id="server-status" class="status-indicator">离线</span>
+        </div>
+
+        <!-- 日志显示区域 -->
+        <div id="console-logs" class="console-logs">
+            <div class="log-line system">等待连接...</div>
+        </div>
+
+        <!-- 指令输入区域 -->
+        <div class="console-input-area">
+            <span class="prompt">></span>
+            <input type="text" id="cmd-input" placeholder="输入指令 (如 /op, /gamemode)..." autocomplete="off">
+            <button id="btn-send">发送</button>
+        </div>
+    </div>
+
+    <script>
+        const logContainer = document.getElementById('console-logs');
+        const inputField = document.getElementById('cmd-input');
+        const sendBtn = document.getElementById('btn-send');
+        const startBtn = document.getElementById('btn-start');
+        const statusSpan = document.getElementById('server-status');
+
+        // 1. 启动服务端
+        startBtn.addEventListener('click', () => {
+            fetch('/api/start', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => addLog(data.msg, 'system'));
+        });
+
+        // 2. 发送指令
+        function sendCommand() {
+            const cmd = inputField.value.trim();
+            if (!cmd) return;
+
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'error') addLog(data.msg, 'error');
+                inputField.value = ''; // 清空输入框
+            });
+        }
+
+        sendBtn.addEventListener('click', sendCommand);
+        inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendCommand();
+        });
+
+        // 3. 实时获取日志 (轮询)
+        function fetchLogs() {
+            fetch('/api/console')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logs.length > 0) {
+                        data.logs.forEach(log => {
+                            // 简单的日志分类着色
+                            let type = 'info';
+                            if (log.includes("ERROR")) type = 'error';
+                            if (log.includes("WARN")) type = 'warn';
+                            if (log.includes("Starting")) type = 'success';
+                            addLog(log, type);
+                        });
+                        // 自动滚动到底部
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+                });
+        }
+
+        // 每 500 毫秒检查一次新日志
+        setInterval(fetchLogs, 500);
+
+        // 辅助函数：添加日志到界面
+        function addLog(text, type) {
+            const div = document.createElement('div');
+            div.className = `log-line ${type}`;
+            // 加上时间戳
+            const time = new Date().toLocaleTimeString();
+            div.innerText = `[${time}] ${text}`;
+            logContainer.appendChild(div);
+        }
+    </script>
+</body>
+</html>

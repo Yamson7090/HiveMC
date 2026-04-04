@@ -1,8 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from datetime import datetime
 
-from definitions import load_config
+from definitions import load_config, load_announcements
 
 # 读取配置文件
 config = load_config()
@@ -12,7 +11,7 @@ if config['database']['type'] == 'sqlite':
     sqlite_ready()
 elif config['database']['type'] == 'mysql':
     from definitions import mysql_ready, login, add_user
-    
+    mysql_ready()
 else:
     print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
     exit(1)
@@ -90,20 +89,8 @@ def backend():
     else :
         user = {'username': session['username']}
 
-    # 模拟公告数据
-    announcements = [
-        {
-            'title': '系统维护通知',
-            'date': '2024-01-15',
-            'content': '系统将于本周六凌晨2:00-4:00进行维护升级，届时服务可能短暂中断，请提前做好准备。'
-        },
-        {
-            'title': '新功能上线',
-            'date': '2024-01-10',
-            'content': '我们很高兴地宣布，新的服务器控制面板功能已上线！现在您可以更方便地管理您的服务器。'
-        }
-    ]
-
+    # 公告
+    announcements = load_announcements()
     # 模拟用户服务器数据
     user_servers = [
         {

@@ -206,6 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# 忽略配置文件，防止密码泄露
+# 忽略配置文件
 config.yml
 users.db
+announcements.json

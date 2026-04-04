@@ -699,3 +699,97 @@ h2 {
         align-items: flex-start;
     }
 }
+
+/* --- 控制台专用样式 --- */
+.console-container {
+    max-width: 900px;
+    margin: 40px auto;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 80vh; /* 占据屏幕高度的 80% */
+}
+
+.console-header {
+    padding: 15px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-action {
+    background: #238636;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.status-indicator {
+    color: #8b949e;
+    font-size: 0.9rem;
+}
+
+/* 日志滚动区域 */
+.console-logs {
+    flex: 1; /* 占据剩余空间 */
+    padding: 15px;
+    overflow-y: auto; /* 允许垂直滚动 */
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9rem;
+    background: #000;
+    color: #c9d1d9;
+}
+
+/* 滚动条美化 */
+.console-logs::-webkit-scrollbar { width: 8px; }
+.console-logs::-webkit-scrollbar-track { background: #0d1117; }
+.console-logs::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+
+/* 日志行样式 */
+.log-line { margin-bottom: 4px; word-break: break-all; }
+.log-line.error { color: #ff7b72; } /* 红色错误 */
+.log-line.warn { color: #d29922; }  /* 黄色警告 */
+.log-line.success { color: #3fb950; } /* 绿色成功 */
+.log-line.system { color: #58a6ff; font-weight: bold; } /* 蓝色系统消息 */
+
+/* 底部输入框 */
+.console-input-area {
+    padding: 15px;
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.prompt { color: #58a6ff; font-weight: bold; font-family: 'VT323', monospace; font-size: 1.5rem; }
+
+#cmd-input {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: 'Roboto Mono', monospace;
+}
+
+#cmd-input:focus { outline: none; border-color: #58a6ff; }
+
+#btn-send {
+    background: #1f6feb;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
