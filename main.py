@@ -90,7 +90,7 @@ def backend():
         user = {'username': session['username']}
 
     # 公告
-    announcements = load_announcements()
+    announcements = load_announcements()[:3]
     # 模拟用户服务器数据
     user_servers = [
     ]

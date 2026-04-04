@@ -31,7 +31,11 @@
             <p>这是一个非盈利的 Minecraft 共享开服平台<br>专为朋友们打造的方块乐园</p>
             
             <div class="actions">
-                <a href="{{ url_for('login_page') }}" class="btn-primary">我要开服</a>
+                {% if user %}
+                    <a href="{{ url_for('backend') }}" class="btn-primary">我要开服</a>
+                {% else %}
+                    <a href="{{ url_for('login_page') }}" class="btn-primary">我要开服</a>
+                {% endif %}
                 <a href="#" class="btn-secondary">查看文档</a>
             </div>
         </div>
