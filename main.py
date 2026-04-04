@@ -117,7 +117,7 @@ def api_start():
 
 @app.route('/api/console', methods=['GET'])
 def get_console_logs():
-    """获取最新的控制台日志 (AJAX 轮询)"""
+    """获取最新 的控制台日志 (AJAX 轮询)"""
     logs = []
     # 尝试从队列中取出所有积压的日志
     while not output_queue.empty():
