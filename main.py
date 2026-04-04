@@ -1,8 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from datetime import datetime
+import queue
 
 import definitions
 from definitions import load_config, load_announcements, start_server, read_mc_output
+
+mc_process = None
+output_queue = queue.Queue() # 用于暂存控制台输出的队列
 
 # 读取配置文件
 config = load_config()
@@ -109,10 +113,14 @@ def logout():
 def status():
     return "Server is running!"
 
+@app.route('/console')
+def console_page():
+    return render_template('console.html')
+
 @app.route('/api/start', methods=['POST'])
 def api_start():
     # 启动服务端接口
-    msg = start_server()
+    msg = start_server(MC_START_CMD=['java', '-jar', 'server.jar', 'nogui'], server_id="1")
     return jsonify({'status': 'success', 'msg': msg})
 
 @app.route('/api/console', methods=['GET'])

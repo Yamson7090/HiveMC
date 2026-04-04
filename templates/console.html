@@ -7,11 +7,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <!-- 顶部导航 -->
     <nav class="navbar">
-        <div class="logo">MAY <span class="sub">CONSOLE</span></div>
+        <div class="logo">MAY <span class="sub">PANEL</span></div>
         <div class="nav-right">
-            <span>用户: {{ user }}</span>
-            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+            {% if user %}
+                <!-- 已登录状态 -->
+                <span class="welcome-text">Hi, {{ user }}</span>
+                <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+            {% else %}
+                <!-- 未登录状态 -->
+                <a href="{{ url_for('login_page') }}" class="btn-login">登录</a>
+            {% endif %}
         </div>
     </nav>
 
