@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from datetime import datetime
 
-from definitions import load_config, load_announcements
+import definitions
+from definitions import load_config, load_announcements, start_server, read_mc_output
 
 # 读取配置文件
 config = load_config()
@@ -29,12 +30,13 @@ def index():
     elif current_user is None:
         flash("欢迎访问 Minecraft 服务器控制面板！请登录以管理您的服务器。", 'info')
     
+    '''
     # 模拟服务器列表
     active_servers = [
         {"name": "阿明的生存服", "owner": "阿明", "status": "running"},
         {"name": "PVP 竞技场", "owner": "大神K", "status": "stopped"},
-    ]
-    return render_template('index.html', servers=active_servers, user=current_user, info=None)
+    ]'''
+    return render_template('index.html', user=current_user, info=None)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -106,6 +108,41 @@ def logout():
 @app.route("/status")
 def status():
     return "Server is running!"
+
+@app.route('/api/start', methods=['POST'])
+def api_start():
+    # 启动服务端接口
+    msg = start_server()
+    return jsonify({'status': 'success', 'msg': msg})
+
+@app.route('/api/console', methods=['GET'])
+def get_console_logs():
+    """获取最新的控制台日志 (AJAX 轮询)"""
+    logs = []
+    # 尝试从队列中取出所有积压的日志
+    while not output_queue.empty():
+        logs.append(output_queue.get())
+    return jsonify({'logs': logs})
+
+@app.route('/api/command', methods=['POST'])
+def send_command():
+    """发送指令到 Minecraft"""
+    global mc_process
+    cmd = request.json.get('command')
+    
+    if not cmd:
+        return jsonify({'status': 'error', 'msg': '指令为空'})
+    
+    if mc_process and mc_process.poll() is None:
+        try:
+            # 将指令写入标准输入，并加上换行符模拟回车
+            mc_process.stdin.write((cmd + "\n").encode('utf-8'))
+            mc_process.stdin.flush()
+            return jsonify({'status': 'success', 'msg': '指令已发送'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'msg': str(e)})
+    else:
+        return jsonify({'status': 'error', 'msg': '服务端未运行，无法发送指令'})
 
 def main():
     print("启动服务器，监听端口",server_port,"...")

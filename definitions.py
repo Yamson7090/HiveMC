@@ -3,6 +3,10 @@ import sqlite3
 import pymysql
 import json
 import os
+import subprocess
+import threading
+import queue
+import time
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def load_config():
@@ -37,6 +41,48 @@ def load_announcements():
             file.write(default_announcements)
         print("❌ 错误：找不到 announcements.json 文件，已重新生成默认配置，请根据文件内容进行修改。")
         return load_announcements()
+
+
+# --- 全局变量 ---
+mc_process = None
+output_queue = queue.Queue() # 用于暂存控制台输出的队列
+
+def read_mc_output():
+    """后台线程：持续读取 Minecraft 的输出并放入队列"""
+    global mc_process
+    if mc_process:
+        # 逐行读取标准输出
+        for line in mc_process.stdout:
+            if line:
+                decoded_line = line.decode('utf-8', errors='ignore').strip()
+                output_queue.put(decoded_line)
+        
+        # 进程结束后的处理
+        output_queue.put("[系统] Minecraft 服务端已关闭。")
+
+def start_server(MC_START_CMD):
+    """启动 Minecraft 服务端"""
+    global mc_process
+    if mc_process and mc_process.poll() is None:
+        return "服务端已经在运行中！"
+    
+    try:
+        # 启动进程，捕获 stdout 和 stdin
+        # text=True 表示以文本模式运行，方便处理字符串
+        mc_process = subprocess.Popen(
+            MC_START_CMD, 
+            stdin=subprocess.PIPE, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, # 将错误输出也合并到标准输出
+            bufsize=1
+        )
+        
+        # 启动读取线程
+        thread = threading.Thread(target=read_mc_output, daemon=True)
+        thread.start()
+        return "服务端启动指令已发送..."
+    except Exception as e:
+        return f"启动失败: {str(e)}"
 
 config = load_config()
 

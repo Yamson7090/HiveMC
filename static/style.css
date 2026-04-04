@@ -142,21 +142,6 @@ h2 {
 
 .card-footer button:hover { background: #21262d; }
 
-/* 统计数据 */
-.stats {
-    display: flex;
-    justify-content: center;
-    gap: 50px;
-    padding: 40px;
-    background: #161b22;
-    border-top: 1px solid #30363d;
-}
-
-.stat-item { text-align: center; }
-.stat-item h3 { font-family: 'VT323', monospace; font-size: 2rem; color: #58a6ff; }
-.stat-item p { font-size: 0.8rem; color: #8b949e; }
-
-footer { text-align: center; padding: 20px; font-size: 0.8rem; color: #484f58; }
 
 /* --- 登录页专用样式 --- */
 .login-body {
