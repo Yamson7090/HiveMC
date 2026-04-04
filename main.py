@@ -93,20 +93,6 @@ def backend():
     announcements = load_announcements()
     # 模拟用户服务器数据
     user_servers = [
-        {
-            'name': '阿明的生存服',
-            'version': '1.20.1',
-            'port': '25565',
-            'status': 'running',
-            'players': '5/20'
-        },
-        {
-            'name': 'PVP 竞技场',
-            'version': '1.19.4',
-            'port': '25566',
-            'status': 'stopped',
-            'players': '0/10'
-        }
     ]
 
     return render_template('backend.html', user=user, announcements=announcements, user_servers=user_servers)

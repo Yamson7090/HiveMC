@@ -42,7 +42,7 @@ config = load_config()
 
 # 根据配置文件选择数据库类型并导入相关函数
 if config['database']['type'] == 'sqlite':
-
+    db_path = config['database']['sqlite']['db_path']
     def sqlite_ready(db_name='users.db'):
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
@@ -61,7 +61,7 @@ if config['database']['type'] == 'sqlite':
         cursor.close()
         conn.close()
 
-    def add_user(username, password, if_admin=0, db_name='users.db'):
+    def add_user(username, password, if_admin=0, db_name=db_path):
         password_hash = generate_password_hash(password)
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
@@ -78,7 +78,7 @@ if config['database']['type'] == 'sqlite':
             conn.close()
     
 
-    def login(username, password, db_name='users.db'):
+    def login(username, password, db_name=db_path):
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
         cursor.execute('SELECT password_hash FROM users WHERE username=?', (username,))
@@ -93,11 +93,11 @@ if config['database']['type'] == 'sqlite':
 elif config['database']['type'] == 'mysql':
     """MySQL 数据库连接"""
     config = load_config()
-    db_user = config['database']['user']
-    db_pass = config['database']['password']
-    db_host = config['database']['host']
-    db_port = config['database']['port']
-    db_name = config['database']['name']
+    db_user = config['database']['mysql']['user']
+    db_pass = config['database']['mysql']['password']
+    db_host = config['database']['mysql']['host']
+    db_port = config['database']['mysql']['port']
+    db_name = config['database']['mysql']['name']
 
     def add_user(username, password, if_admin=0):
         password_hash = generate_password_hash(password)
