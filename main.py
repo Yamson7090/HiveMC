@@ -34,8 +34,8 @@ def index():
     '''
     # 模拟服务器列表
     active_servers = [
-        {"name": "阿明的生存服", "owner": "阿明", "status": "running"},
-        {"name": "PVP 竞技场", "owner": "大神K", "status": "stopped"},
+        {"name": "阿明的生存服", "owner": "阿明", "status": "running", "server_id": "1"},
+        {"name": "PVP 竞技场", "owner": "大神K", "status": "stopped", "server_id": "2"},
     ]'''
     return render_template('index.html', user=current_user, info=None)
 
@@ -96,6 +96,8 @@ def backend():
     announcements = load_announcements()[:3]
     # 模拟用户服务器数据
     user_servers = [
+        {"name": "阿明的生存服", "owner": "阿明", "status": "running", "server_id": 1},
+        {"name": "PVP 竞技场", "owner": "大神K", "status": "stopped", "server_id": 2}
     ]
 
     return render_template('backend.html', user=user, announcements=announcements, user_servers=user_servers)
@@ -110,9 +112,10 @@ def logout():
 def status():
     return "Server is running!"
 
-@app.route('/console')
+@app.route('/console', methods=['POST'])
 def console_page():
-    return render_template('console.html')
+    server_id = request.form.get('server_id')
+    return render_template('console.html', server_id=server_id)
 
 @app.route('/api/start', methods=['POST'])
 def api_start():
@@ -121,16 +124,16 @@ def api_start():
     return jsonify({'status': 'success', 'msg': msg})
 
 @app.route('/api/console', methods=['GET'])
-def get_console_logs():
+def get_console_logs(server_id):
     """获取最新 的控制台日志 (AJAX 轮询)"""
     logs = []
     # 尝试从队列中取出所有积压的日志
-    while not output_queue.empty():
-        logs.append(output_queue.get())
+    while not output_queue[server_id].empty():
+        logs.append(output_queue[server_id].get())
     return jsonify({'logs': logs})
 
 @app.route('/api/command', methods=['POST'])
-def send_command():
+def send_command(server_id):
     """发送指令到 Minecraft"""
     global mc_process
     cmd = request.json.get('command')
@@ -138,11 +141,11 @@ def send_command():
     if not cmd:
         return jsonify({'status': 'error', 'msg': '指令为空'})
     
-    if mc_process and mc_process.poll() is None:
+    if mc_process[server_id] and mc_process[server_id].poll() is None:
         try:
             # 将指令写入标准输入，并加上换行符模拟回车
-            mc_process.stdin.write((cmd + "\n").encode('utf-8'))
-            mc_process.stdin.flush()
+            mc_process[server_id].stdin.write((cmd + "\n").encode('utf-8'))
+            mc_process[server_id].stdin.flush()
             return jsonify({'status': 'success', 'msg': '指令已发送'})
         except Exception as e:
             return jsonify({'status': 'error', 'msg': str(e)})

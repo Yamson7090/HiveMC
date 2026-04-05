@@ -73,7 +73,10 @@
                         </div>
                         <div class="card-footer">
                             <button class="btn-manage">管理</button>
-                            <button class="btn-console">控制台</button>
+                            <form action="{{ url_for('console_page') }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="server_id" value="{{ server.server_id }}">
+                                <button type="submit" class="btn-console">控制台</button>
+                            </form>
                         </div>
                     </div>
                     {% endfor %}

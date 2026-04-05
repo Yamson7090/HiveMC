@@ -9,9 +9,6 @@ import queue
 import time
 from werkzeug.security import generate_password_hash, check_password_hash
 
-mc_process = None
-output_queue = queue.Queue() # 用于暂存控制台输出的队列
-
 def load_config():
     try:
         with open('config.yml', 'r', encoding='utf-8') as file:
@@ -24,6 +21,8 @@ def load_config():
             file.write(default_config)
         print("❌ 错误：找不到 config.yml 文件，已重新生成默认配置，请根据文件内容进行修改。")
         exit(1)
+
+config = load_config()
 
 ANNOUNCE_FILE = 'announcements.json'
 def load_announcements():
@@ -47,32 +46,33 @@ def load_announcements():
 
 
 # --- 全局变量 ---
-mc_process = None
-output_queue = queue.Queue() # 用于暂存控制台输出的队列
+mc_process = [None] * (config['server']['max_servers']+1) # 用于存储每个服务器的进程对象，索引对应服务器ID，0号位未使用
+output_queue = [queue.Queue()] * (config['server']['max_servers']+1) # 用于暂存控制台输出的队列
+server_pid = [None] * (config['server']['max_servers']+1) # 存储每个服务器的PID，索引对应服务器ID，0号位未使用
 
-def read_mc_output():
+def read_mc_output(server_id):
     """后台线程：持续读取 Minecraft 的输出并放入队列"""
     global mc_process
-    if mc_process:
+    if mc_process[server_id]:
         # 逐行读取标准输出
-        for line in mc_process.stdout:
+        for line in mc_process[server_id].stdout:
             if line:
                 decoded_line = line.strip()
-                output_queue.put(decoded_line)
+                output_queue[server_id].put(decoded_line)
         
         # 进程结束后的处理
-        output_queue.put("[系统] Minecraft 服务端已关闭。")
+        output_queue[server_id].put("[系统] Minecraft 服务端已关闭。")
 
 def start_server(MC_START_CMD, server_id):
     """启动 Minecraft 服务端"""
     global mc_process
-    if mc_process and mc_process.poll() is None:
+    if mc_process[server_id] and mc_process[server_id].poll() is None:
         return "服务端已经在运行中！"
     
     try:
         # 启动进程，捕获 stdout 和 stdin
         # text=True 表示以文本模式运行，方便处理字符串
-        mc_process = subprocess.Popen(
+        mc_process[server_id] = subprocess.Popen(
             MC_START_CMD, 
             stdin=subprocess.PIPE, 
             stdout=subprocess.PIPE, 
@@ -86,7 +86,7 @@ def start_server(MC_START_CMD, server_id):
         # 启动读取线程
         thread = threading.Thread(target=read_mc_output, daemon=True)
         thread.start()
-        return mc_process.pid
+        return mc_process[server_id].pid
     except Exception as e:
         return f"启动失败: {str(e)}"
 
