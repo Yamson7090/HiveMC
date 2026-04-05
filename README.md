@@ -63,6 +63,7 @@ uv run main.py
 ### 5. 启动项目
 ```bash
 uv run main.py
+uv run main.py
 ```
 或直接运行 start.cmd 
 
