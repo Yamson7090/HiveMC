@@ -45,8 +45,11 @@ git clone https://github.com/yourname/HiveMC.git
 cd HiveMC
 ```
 
-### 3. 双击启动脚本 start.cmd
-脚本会自动安装 uv 并创建虚拟环境来启动项目。
+### 3. 启动脚本 start.cmd 或运行以下指令以安装uv并初始化配置文件。
+```bash
+pip install uv
+uv run main.py
+```
 
 ### 4. 配置文件初始化
 项目启动时会自动检测配置文件，若不存在将从defalts中复制。
@@ -58,8 +61,9 @@ cd HiveMC
 
 ### 5. 启动项目
 ```bash
-python main.py
+uv run main.py
 ```
+或直接运行 start.cmd 
 *默认监听端口*: **80** (可在 `config.yml` 中修改)
 
 启动成功后，访问 `http://localhost:80` 即可查看面板。
