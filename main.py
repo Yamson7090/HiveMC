@@ -3,7 +3,7 @@ from datetime import datetime
 import queue
 
 # import definitions
-from definitions import load_config, load_announcements, start_server, output_queue, mc_process
+from definitions import load_config, load_announcements, start_server, read_cmd_from_file, output_queues, mc_process
 
 # 读取配置文件
 config = load_config()
@@ -112,28 +112,41 @@ def logout():
 def status():
     return "Server is running!"
 
-@app.route('/console', methods=['POST'])
+@app.route('/console', methods=['GET'])
 def console_page():
-    server_id = request.form.get('server_id')
-    return render_template('console.html', server_id=server_id)
+    # 检查是否登录
+    if session.get('username') is None:
+        flash('请先登录', 'error')
+        return redirect(url_for('login_page'))
+    else :
+        user = {'username': session['username']}
+
+    server_id = int(request.args.get('server_id'))
+
+    # 如果 URL 中带有 server_id，将其传给前端模板
+    return render_template('console.html', server_id=server_id, user=user)
 
 @app.route('/api/start', methods=['POST'])
 def api_start():
+    server_id = int(request.json.get('server_id'))
     # 启动服务端接口
-    msg = start_server(MC_START_CMD=['java', '-jar', 'server.jar', 'nogui'], server_id="1")
+    msg = start_server(server_id=server_id)
     return jsonify({'status': 'success', 'msg': msg})
 
 @app.route('/api/console', methods=['GET'])
-def get_console_logs(server_id):
+def get_console_logs():
+    server_id = int(request.args.get('server_id'))
     """获取最新 的控制台日志 (AJAX 轮询)"""
     logs = []
-    # 尝试从队列中取出所有积压的日志
-    while not output_queue[server_id].empty():
-        logs.append(output_queue[server_id].get())
+    if server_id in output_queues:
+        # 尝试从队列中取出所有积压的日志
+        while not output_queues[server_id].empty():
+            logs.append(output_queues[server_id].get())
     return jsonify({'logs': logs})
 
 @app.route('/api/command', methods=['POST'])
-def send_command(server_id):
+def send_command():
+    server_id = int(request.json.get('server_id'))
     """发送指令到 Minecraft"""
     global mc_process
     cmd = request.json.get('command')
@@ -144,7 +157,7 @@ def send_command(server_id):
     if mc_process[server_id] and mc_process[server_id].poll() is None:
         try:
             # 将指令写入标准输入，并加上换行符模拟回车
-            mc_process[server_id].stdin.write((cmd + "\n").encode('utf-8'))
+            mc_process[server_id].stdin.write((cmd + "\n"))
             mc_process[server_id].stdin.flush()
             return jsonify({'status': 'success', 'msg': '指令已发送'})
         except Exception as e:

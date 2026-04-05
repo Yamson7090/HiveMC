@@ -6,7 +6,7 @@ import os
 import subprocess
 import threading
 import queue
-import time
+import ast
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def load_config():
@@ -23,6 +23,20 @@ def load_config():
         exit(1)
 
 config = load_config()
+
+def read_cmd_from_file(filepath):
+    try:
+        with open(filepath, 'r', encoding='utf-8') as file:
+            content = file.read().strip()
+            # 将字符串 "['java', ...]" 转换为真正的 List 对象
+            cmd_list = ast.literal_eval(content)
+            return cmd_list
+    except FileNotFoundError:
+        print(f"错误：找不到文件 {filepath}")
+        return None
+    except SyntaxError:
+        print("错误：文件内容格式不正确，不是有效的列表格式")
+        return None
 
 ANNOUNCE_FILE = 'announcements.json'
 def load_announcements():
@@ -47,7 +61,7 @@ def load_announcements():
 
 # --- 全局变量 ---
 mc_process = [None] * (config['server']['max_servers']+1) # 用于存储每个服务器的进程对象，索引对应服务器ID，0号位未使用
-output_queue = [queue.Queue()] * (config['server']['max_servers']+1) # 用于暂存控制台输出的队列
+output_queues = {}
 server_pid = [None] * (config['server']['max_servers']+1) # 存储每个服务器的PID，索引对应服务器ID，0号位未使用
 
 def read_mc_output(server_id):
@@ -58,39 +72,47 @@ def read_mc_output(server_id):
         for line in mc_process[server_id].stdout:
             if line:
                 decoded_line = line.strip()
-                output_queue[server_id].put(decoded_line)
+                output_queues[server_id].put(decoded_line)
         
         # 进程结束后的处理
-        output_queue[server_id].put("[系统] Minecraft 服务端已关闭。")
+        output_queues[server_id].put("[系统] Minecraft 服务端已关闭。")
 
-def start_server(MC_START_CMD, server_id):
+def start_server(server_id):
     """启动 Minecraft 服务端"""
     global mc_process
+    if server_id not in output_queues:
+        output_queues[server_id] = queue.Queue()
     if mc_process[server_id] and mc_process[server_id].poll() is None:
         return "服务端已经在运行中！"
     
+    # 判断启动脚本是否存在
+    if not os.path.exists(f"servers/{server_id}/start.txt"):
+        with open(f"servers/{server_id}/start.txt", 'w', encoding='utf-8') as f:
+            with open('defaults/default_start.txt', 'r', encoding='utf-8') as default_file:
+                file=default_file.read()
+            f.write(file)
+        return f"启动脚本缺失，已生成默认 start.txt，请编辑后重新尝试启动服务器 {server_id}。"
+
     try:
         # 启动进程，捕获 stdout 和 stdin
         # text=True 表示以文本模式运行，方便处理字符串
         mc_process[server_id] = subprocess.Popen(
-            MC_START_CMD, 
-            stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, 
+            read_cmd_from_file(f"servers/{server_id}/start.txt"),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, # 将错误输出也合并到标准输出
-            cwd=os.path.join(os.getcwd(), "servers", server_id),
+            cwd=os.path.join(os.getcwd(), "servers", str(server_id)),
             bufsize=1,
             text=True,
             encoding='utf-8'
         )
         
         # 启动读取线程
-        thread = threading.Thread(target=read_mc_output, daemon=True)
+        thread = threading.Thread(target=read_mc_output, args=(server_id,), daemon=True)
         thread.start()
         return mc_process[server_id].pid
     except Exception as e:
         return f"启动失败: {str(e)}"
-
-config = load_config()
 
 # 根据配置文件选择数据库类型并导入相关函数
 if config['database']['type'] == 'sqlite':

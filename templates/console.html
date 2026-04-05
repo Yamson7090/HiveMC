@@ -11,14 +11,8 @@
     <nav class="navbar">
         <div class="logo">MAY <span class="sub">PANEL</span></div>
         <div class="nav-right">
-            {% if user %}
-                <!-- 已登录状态 -->
-                <span class="welcome-text">Hi, {{ user }}</span>
-                <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
-            {% else %}
-                <!-- 未登录状态 -->
-                <a href="{{ url_for('login_page') }}" class="btn-login">登录</a>
-            {% endif %}
+            <span class="welcome-text">Hi, {{ user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
         </div>
     </nav>
 
@@ -37,12 +31,13 @@
         <!-- 指令输入区域 -->
         <div class="console-input-area">
             <span class="prompt">></span>
-            <input type="text" id="cmd-input" placeholder="输入指令 (如 /op, /gamemode)..." autocomplete="off">
+            <input type="text" id="cmd-input" placeholder="输入指令 (如 /op, /gamemode)..." autocomplete="on">
             <button id="btn-send">发送</button>
         </div>
     </div>
 
     <script>
+        const SERVER_ID = "{{ server_id }}" ;
         const logContainer = document.getElementById('console-logs');
         const inputField = document.getElementById('cmd-input');
         const sendBtn = document.getElementById('btn-send');
@@ -51,9 +46,18 @@
 
         // 1. 启动服务端
         startBtn.addEventListener('click', () => {
-            fetch('/api/start', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => addLog(data.msg, 'system'));
+            const sid = SERVER_ID; 
+
+            fetch('/api/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ server_id: sid })
+            })
+            .then(res => res.json())
+            .then(data => addLog(data.msg, 'system'))
+            .catch(err => addLog("启动请求失败: " + err, 'error'));
         });
 
         // 2. 发送指令
@@ -64,7 +68,7 @@
             fetch('/api/command', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: cmd })
+                body: JSON.stringify({ command: cmd, server_id: SERVER_ID })
             })
             .then(res => res.json())
             .then(data => {
@@ -80,7 +84,8 @@
 
         // 3. 实时获取日志 (轮询)
         function fetchLogs() {
-            fetch('/api/console')
+            
+            fetch('/api/console?server_id={{ server_id }}')
                 .then(res => res.json())
                 .then(data => {
                     if (data.logs.length > 0) {

@@ -72,11 +72,13 @@
                             <p>状态: <span class="status-badge {{ server.status }}">{{ server.status|upper }}</span></p>
                         </div>
                         <div class="card-footer">
-                            <button class="btn-manage">管理</button>
-                            <form action="{{ url_for('console_page') }}" method="POST" style="display: inline;">
-                                <input type="hidden" name="server_id" value="{{ server.server_id }}">
-                                <button type="submit" class="btn-console">控制台</button>
-                            </form>
+                            {% if server.server_id %}
+                            <button id="btn-manage" onclick="gotofilemanager('{{ server.server_id }}')">管理</button>
+                            <button id="btn-console" onclick="gotoconsole('{{ server.server_id }}')">控制台</button>
+                            {% else %}
+                            <button id="btn-manage" disabled>管理</button>
+                            <button id="btn-console" disabled>控制台</button>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}
@@ -105,6 +107,14 @@
     <footer>
         <p>Powered by MAY | Made with ❤️ for Friends</p>
     </footer>
+
+    <script>
+        const gotoconsoleBtn = document.getElementById('btn-console');
+
+        function gotoconsole(serverId) {
+            window.location.href = `/console?server_id=${serverId}`;
+        }
+    </script>
 
 </body>
 </html>
