@@ -2,11 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from datetime import datetime
 import queue
 
-import definitions
-from definitions import load_config, load_announcements, start_server, read_mc_output
-
-mc_process = None
-output_queue = queue.Queue() # 用于暂存控制台输出的队列
+# import definitions
+from definitions import load_config, load_announcements, start_server, output_queue, mc_process
 
 # 读取配置文件
 config = load_config()

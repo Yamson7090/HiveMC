@@ -9,6 +9,9 @@ import queue
 import time
 from werkzeug.security import generate_password_hash, check_password_hash
 
+mc_process = None
+output_queue = queue.Queue() # 用于暂存控制台输出的队列
+
 def load_config():
     try:
         with open('config.yml', 'r', encoding='utf-8') as file:
@@ -54,7 +57,7 @@ def read_mc_output():
         # 逐行读取标准输出
         for line in mc_process.stdout:
             if line:
-                decoded_line = line.decode('utf-8', errors='ignore').strip()
+                decoded_line = line.strip()
                 output_queue.put(decoded_line)
         
         # 进程结束后的处理
@@ -74,8 +77,10 @@ def start_server(MC_START_CMD, server_id):
             stdin=subprocess.PIPE, 
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, # 将错误输出也合并到标准输出
-            cwd=os.path.join(os.getcwd(), os.path.join("servers", server_id)),
-            bufsize=1
+            cwd=os.path.join(os.getcwd(), "servers", server_id),
+            bufsize=1,
+            text=True,
+            encoding='utf-8'
         )
         
         # 启动读取线程
