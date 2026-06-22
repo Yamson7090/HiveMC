@@ -13,6 +13,7 @@ from definitions import check_admin, list_users, set_admin_status, reset_passwor
 from definitions import get_server_limit, set_server_limit
 from definitions import get_user_servers, add_user_server, remove_user_server, check_server_owner
 from definitions import SERVER_DIR
+from definitions import is_velocity_enabled, init_velocity_server, get_server_info, save_server_info, delete_server_info, get_all_servers_info, ensure_server_properties, get_velocity_port, sync_velocity_toml_servers
 
 # 读取配置文件
 config = load_config()
@@ -24,6 +25,10 @@ elif config['database']['type'] == 'mysql':
 else:
     print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
     exit(1)
+
+# 初始化 Velocity 服务器（如启用）
+if config.get('velocity', {}).get('enable', False):
+    init_velocity_server()
 
 app = Flask(__name__)
 app.secret_key = config['server']['secret_key']
@@ -226,8 +231,28 @@ def scan_servers():
     if not os.path.isdir(servers_dir):
         return []
     result = []
+
+    # 如果启用了 Velocity，包含 ID 0
+    if config.get('velocity', {}).get('enable', False):
+        vdir = os.path.join(SERVER_DIR, '0')
+        if os.path.isdir(vdir):
+            running = (0 < len(mc_process) and mc_process[0] and mc_process[0].poll() is None)
+            info = get_server_info(0)
+            vport = get_velocity_port()
+            result.append({
+                'server_id': 0,
+                'status': 'running' if running else 'stopped',
+                'has_start_txt': os.path.isfile(os.path.join(vdir, 'start.txt')),
+                'name': info['server_name'] if info else 'Velocity 代理',
+                'server_port': vport
+            })
+
     for entry in sorted(os.listdir(servers_dir)):
         if not entry.isdigit():
+            continue
+        sid = int(entry)
+        # 如果启用了 Velocity，跳过 ID 0（已手动添加）
+        if config.get('velocity', {}).get('enable', False) and sid == 0:
             continue
         sid = int(entry)
         server_dir = os.path.join(servers_dir, entry)
@@ -239,11 +264,16 @@ def scan_servers():
             running = True
         # 检测是否有 start.txt
         has_start = os.path.isfile(os.path.join(server_dir, 'start.txt'))
+        info = get_server_info(sid)
+        server_port = (info or {}).get('server_port', 0)
+        if not server_port:
+            server_port = 30000 + sid  # 旧服务器自动补全端口
         result.append({
             'server_id': sid,
             'status': 'running' if running else 'stopped',
             'has_start_txt': has_start,
-            'name': f'服务器 #{sid}'
+            'name': info['server_name'] if info and info.get('server_name') else f'服务器 #{sid}',
+            'server_port': server_port
         })
     return result
 
@@ -298,9 +328,15 @@ def api_create_server():
         with open(start_txt_path, 'w', encoding='utf-8') as f:
             with open('defaults/default_start.txt', 'r', encoding='utf-8') as df:
                 f.write(df.read())
+        # 分配端口（30001 起依次递增）
+        server_port = 30000 + new_id
+        save_server_info(new_id, server_port=server_port)
         # 记录所有权
         add_user_server(username, new_id)
-        return jsonify({'status': 'success', 'server_id': new_id, 'msg': f'服务器 #{new_id} 已创建'})
+        # 同步到 velocity.toml
+        if config.get('velocity', {}).get('enable', False):
+            sync_velocity_toml_servers()
+        return jsonify({'status': 'success', 'server_id': new_id, 'server_port': server_port, 'msg': f'服务器 #{new_id} 已创建（端口 {server_port}）'})
     except Exception as e:
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
@@ -310,6 +346,8 @@ def api_create_server():
 def api_delete_server():
     """删除服务器（删除整个目录，不可恢复）"""
     server_id = int(request.json.get('server_id'))
+    if server_id == 0:
+        return jsonify({'status': 'error', 'msg': 'Velocity 代理服务器不可删除'}), 400
     err = require_server_owner(server_id)
     if err: return err
     import shutil
@@ -338,9 +376,30 @@ def api_delete_server():
     try:
         shutil.rmtree(server_dir)
         remove_user_server(session['username'], server_id)
+        delete_server_info(server_id)
+        if config.get('velocity', {}).get('enable', False):
+            sync_velocity_toml_servers()
         return jsonify({'status': 'success', 'msg': f'服务器 #{server_id} 已删除（不可恢复）'})
     except Exception as e:
         return jsonify({'status': 'error', 'msg': f'删除失败: {str(e)}'}), 500
+
+
+@app.route('/api/server/rename', methods=['POST'])
+@json_login_required
+def api_rename_server():
+    """重命名服务器"""
+    server_id = int(request.json.get('server_id'))
+    new_name = (request.json.get('name') or '').strip()
+    if not new_name:
+        return jsonify({'status': 'error', 'msg': '服务器名不能为空'}), 400
+    if len(new_name) > 50:
+        return jsonify({'status': 'error', 'msg': '服务器名不能超过50个字符'}), 400
+    err = require_server_owner(server_id)
+    if err: return err
+    ok = save_server_info(server_id, server_name=new_name)
+    if ok:
+        return jsonify({'status': 'success', 'msg': f'已重命名为 {new_name}'})
+    return jsonify({'status': 'error', 'msg': '改名失败'}), 500
 
 
 @app.route('/api/server/status', methods=['GET'])

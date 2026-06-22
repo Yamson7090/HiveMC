@@ -209,5 +209,6 @@ __marimo__/
 # 忽略配置文件
 config.yml
 users.db
+servers.db
 announcements.json
 servers/

@@ -105,6 +105,24 @@
         </div>
     </div>
 
+    <!-- 重命名服务器弹窗 -->
+    <div class="fm-modal-overlay" id="rename-server-modal" style="display:none;">
+        <div class="fm-modal" style="width:360px;">
+            <div class="fm-modal-header">
+                <span>重命名服务器</span>
+                <button class="fm-modal-close" onclick="closeModal('rename-server-modal')">&times;</button>
+            </div>
+            <div class="fm-modal-body">
+                <label>新名称：</label>
+                <input type="text" id="rename-server-input" class="fm-modal-input" placeholder="输入新的服务器名称" maxlength="50">
+            </div>
+            <div class="fm-modal-footer">
+                <button class="fm-btn fm-btn-cancel" onclick="closeModal('rename-server-modal')">取消</button>
+                <button class="fm-btn fm-btn-save" id="btn-confirm-rename-server" onclick="confirmRenameServer()">确认</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function loadServers() {
             const grid = document.getElementById('server-grid');
@@ -138,16 +156,17 @@
                 html += '<div class="server-card">' +
                     '<div class="card-header">' +
                         '<span class="status-dot ' + s.status + '"></span>' +
-                        '<span class="server-name">' + escapeHtml(s.name) + '</span>' +
+                        '<span class="server-name" onclick="showRenameModal(' + s.server_id + ', \'' + escapeAttr(s.name) + '\')" title="点击改名">' + escapeHtml(s.name) + '</span>' +
                     '</div>' +
                     '<div class="card-body">' +
                         '<p>ID: <span class="version-text">#' + s.server_id + '</span></p>' +
-                        '<p>启动脚本: ' + (s.has_start_txt ? '就绪' : '缺失') + '</p>' +
+                        '<p>端口: <span class="version-text">' + s.server_port + '</span></p>' +
                         '<p>状态: <span class="status-badge ' + s.status + '">' + (running ? '运行中' : '已停止') + '</span></p>' +
                     '</div>' +
                     '<div class="card-footer">' +
                         '<button class="btn-manage" onclick="gotofilemanager(' + s.server_id + ')">文件</button>' +
                         '<button class="btn-console" onclick="gotoconsole(' + s.server_id + ')">控制台</button>' +
+                        '<button class="btn-rename-server" onclick="event.stopPropagation(); showRenameModal(' + s.server_id + ', \'' + escapeAttr(s.name) + '\')">改名</button>' +
                         '<button class="btn-delete-server" onclick="showDeleteServerModal(' + s.server_id + ')">删除</button>' +
                     '</div></div>';
             });
@@ -258,6 +277,45 @@
             t.textContent = msg;
             document.body.appendChild(t);
             setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 3000);
+        }
+
+        let renameServerId = null;
+
+        function showRenameModal(serverId, currentName) {
+            renameServerId = serverId;
+            document.getElementById('rename-server-input').value = currentName;
+            document.getElementById('rename-server-modal').style.display = 'flex';
+            setTimeout(function() { document.getElementById('rename-server-input').focus(); }, 100);
+        }
+
+        function confirmRenameServer() {
+            var name = document.getElementById('rename-server-input').value.trim();
+            if (!name) { showToast('名称不能为空', 'error'); return; }
+            var btn = document.getElementById('btn-confirm-rename-server');
+            btn.textContent = '...'; btn.disabled = true;
+
+            fetch('/api/server/rename', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ server_id: renameServerId, name: name })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.textContent = '确认'; btn.disabled = false;
+                if (data.status === 'success') {
+                    closeModal('rename-server-modal');
+                    loadServers();
+                    showToast(data.msg, 'success');
+                } else { showToast(data.msg, 'error'); }
+            })
+            .catch(function() { btn.textContent = '确认'; btn.disabled = false; });
+        }
+
+        document.getElementById('rename-server-modal').addEventListener('click', function(e) { if (e.target === this) closeModal('rename-server-modal'); });
+        document.getElementById('rename-server-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') confirmRenameServer(); if (e.key === 'Escape') closeModal('rename-server-modal'); });
+
+        function escapeAttr(str) {
+            return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
         loadServers();

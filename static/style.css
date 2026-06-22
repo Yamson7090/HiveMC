@@ -318,7 +318,8 @@ footer {
     gap: 8px;
 }
 
-.server-name { font-weight: 600; color: #222; font-size: 0.95rem; }
+.server-name { font-weight: 600; color: #222; font-size: 0.95rem; cursor: pointer; transition: color 0.15s; }
+.server-name:hover { color: #f39c12; }
 
 .card-body {
     padding: 14px 16px;
@@ -357,6 +358,8 @@ footer {
 .btn-console:hover { border-color: #2ecc71 !important; color: #2ecc71 !important; }
 .btn-delete-server { border-color: #e74c3c !important; color: #e74c3c !important; }
 .btn-delete-server:hover { background: #e74c3c !important; color: #fff !important; }
+.btn-rename-server { border-color: #f39c12 !important; color: #f39c12 !important; }
+.btn-rename-server:hover { background: #f39c12 !important; color: #fff !important; }
 
 /* --- 公告 --- */
 .announcements-section { margin-bottom: 40px; }
