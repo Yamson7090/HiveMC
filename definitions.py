@@ -1,16 +1,35 @@
-import yaml
-import sqlite3
-import pymysql
-import json
-import os
-import subprocess
-import threading
-import queue
-import urllib.request
-import urllib.error
-from werkzeug.security import generate_password_hash, check_password_hash
+# ============================================================
+# definitions.py — HiveMC 核心业务逻辑层
+# ============================================================
+# 本模块负责所有底层操作：
+#   - 配置文件/公告的加载与管理
+#   - Minecraft Java 服务端进程的启停与日志读取
+#   - 用户数据库（SQLite / MySQL 双模式）操作
+#   - 服务器所有权与开服上限管理
+#   - Velocity 代理的自动配置与 JAR 下载
+# ============================================================
+
+import yaml          # 解析 config.yml 配置文件
+import sqlite3       # SQLite 轻量级数据库
+import pymysql       # MySQL 数据库驱动
+import json          # JSON 解析（公告、API 响应等）
+import os            # 文件和路径操作
+import subprocess    # 启动/管理 Minecraft Java 子进程
+import threading     # 后台线程读取子进程输出
+import queue         # 线程安全的日志队列（Queue）
+import urllib.request, urllib.error  # 从 PaperMC API 下载 Velocity JAR
+from werkzeug.security import generate_password_hash, check_password_hash  # 密码 bcrypt 哈希
+
+# ============================================================
+# 一、配置与公告加载
+# ============================================================
 
 def load_config():
+    """
+    加载 config.yml 配置文件。
+    如果文件不存在，则从 defaults/default_config.yml 复制一份默认配置并退出，
+    提示用户修改后再启动。
+    """
     try:
         with open('config.yml', 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)
@@ -23,11 +42,19 @@ def load_config():
         print("❌ 错误：找不到 config.yml 文件，已重新生成默认配置，请根据文件内容进行修改。")
         exit(1)
 
+# 全局配置对象（模块加载时立即初始化）
 config = load_config()
-SERVER_DIR = config['server']['server_directory']
+SERVER_DIR = config['server']['server_directory']  # 服务器文件存放目录，如 "servers/"
 
 def read_start_config(filepath):
-    """读取启动配置文件，返回 (jar_name, java_args, nogui) 元组。
+    """
+    读取 Minecraft 服务端启动配置文件 (start.txt)。
+    文件格式（每行一个配置项）：
+        第一行: Java 参数 (可选，如 -Xmx1024M)
+        第二行: JAR 文件名 (必需，如 server.jar)
+        第三行: nogui (可选，留空则不添加)
+    返回: (jar_name, java_args, nogui) 元组，失败返回 None
+    """
     文件格式（三行）：
         第一行: Java 参数 (可选，如 -Xmx1024M)
         第二行: JAR 文件名 (必需)
@@ -53,18 +80,21 @@ def read_start_config(filepath):
         return None
 
 ANNOUNCE_FILE = 'announcements.json'
+
 def load_announcements():
-    """加载公告数据"""
+    """
+    加载 announcements.json 公告数据。
+    如果文件不存在，从 defaults/default_announcements.json 复制默认公告模板。
+    如果文件损坏，返回空列表。
+    """
     if os.path.exists(ANNOUNCE_FILE):
         try:
             with open(ANNOUNCE_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             print(f"读取公告文件错误: {e}")
-            # 如果文件损坏或为空，返回一个空列表
             return []
     else:
-        # 如果文件不存在，返回一个示例公告（或者空列表）
         with open(ANNOUNCE_FILE, 'w', encoding='utf-8') as file:
             with open('defaults/default_announcements.json', 'r', encoding='utf-8') as default_file:
                 default_announcements = default_file.read()
@@ -73,26 +103,50 @@ def load_announcements():
         return load_announcements()
 
 
-# --- 全局变量 ---
-mc_process = [None] * (config['server']['max_servers']+1) # 用于存储每个服务器的进程对象，索引对应服务器ID，0号位未使用
+# ============================================================
+# 二、Minecraft 服务端进程管理
+# ============================================================
+
+# mc_process 列表：索引对应服务器 ID，每个元素是一个 subprocess.Popen 对象
+# 例如 mc_process[1] 对应服务器 #1 的进程，mc_process[0] 保留给 Velocity 代理
+mc_process = [None] * (config['server']['max_servers'] + 1)
+
+# output_queues 字典：键为 server_id，值为 queue.Queue，用于线程安全地传递控制台日志
 output_queues = {}
-server_pid = [None] * (config['server']['max_servers']+1) # 存储每个服务器的PID，索引对应服务器ID，0号位未使用
+
+# server_pid 列表：存储每个服务器的进程 PID（当前未广泛使用）
+server_pid = [None] * (config['server']['max_servers'] + 1)
+
 
 def read_mc_output(server_id):
-    """后台线程：持续读取 Minecraft 的输出并放入队列"""
+    """
+    后台线程目标函数：持续读取 Minecraft 子进程的 stdout 输出，
+    逐行放入 output_queues[server_id] 队列，供 Web 前端轮询消费。
+    当进程结束时，在队列中放入一条关闭通知。
+    """
     global mc_process
     if mc_process[server_id]:
-        # 逐行读取标准输出
         for line in mc_process[server_id].stdout:
             if line:
                 decoded_line = line.strip()
                 output_queues[server_id].put(decoded_line)
-        
-        # 进程结束后的处理
+        # 进程结束标记
         output_queues[server_id].put("[系统] Minecraft 服务端已关闭。")
 
+
 def start_server(server_id):
-    """启动 Minecraft 服务端"""
+    """
+    启动指定 ID 的 Minecraft 服务端。
+    流程：
+      1. 检查在线服务器数量是否达到上限
+      2. 检查 start.txt 启动配置文件是否存在，缺失则生成默认
+      3. 解析启动配置（JAR 名、Java 参数、nogui 标志）
+      4. 自动配置 Velocity 代理相关设置（如启用）
+      5. 确保 server.properties 端口与数据库一致
+      6. 启动 Java 子进程并启动日志读取线程
+      7. 同步后端服务器到 velocity.toml
+    返回：成功返回 PID，失败返回错误描述字符串
+    """
     global mc_process
 
     # 检查在线服务器数量上限
@@ -146,38 +200,40 @@ def start_server(server_id):
         cmd.append('nogui')
 
     try:
-        # 启动进程，捕获 stdout 和 stdin
-        # text=True 表示以文本模式运行，方便处理字符串
+        # 启动 Java 子进程
+        # - stdin=PIPE: 允许 Web 前端通过 API 向服务器发送指令
+        # - stdout=PIPE: 捕获服务器控制台输出
+        # - stderr=STDOUT: 错误输出合并到标准输出
+        # - text=True: 以文本模式与子进程通信
         mc_process[server_id] = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # 将错误输出也合并到标准输出
+            stderr=subprocess.STDOUT,
             cwd=os.path.join(os.getcwd(), SERVER_DIR, str(server_id)),
             bufsize=1,
             text=True,
             encoding='utf-8'
         )
-        
-        # 启动读取线程
+
+        # 启动后台线程：持续读取子进程输出到队列，供前端轮询
         thread = threading.Thread(target=read_mc_output, args=(server_id,), daemon=True)
         thread.start()
 
-        # 启动首次启动配置线程（Velocity 代理配置）
+        # 如果启用了 Velocity 且核心支持，启动线程配置 paper-global.yml 的转发密钥
         if is_velocity_enabled():
             info = get_server_info(server_id)
             if info and is_velocity_core(info.get('server_core', '')):
                 t = threading.Thread(target=_post_start_velocity_config, args=(server_id,), daemon=True)
                 t.start()
 
-        # 后台线程：等 server.properties 出现后修正端口
+        # 后台线程：等待 server.properties 出现后修正端口（防止被 Minecraft 默认覆盖）
         t = threading.Thread(target=_wait_and_fix_port, args=(server_id,), daemon=True)
         t.start()
 
-        # 同步后端服务器到 velocity.toml
+        # 同步后端服务器列表至 velocity.toml 并通知 Velocity 重载
         if is_velocity_enabled():
             sync_velocity_toml_servers()
-            # 通知 Velocity 重载配置
             if mc_process[0] and mc_process[0].poll() is None:
                 try:
                     mc_process[0].stdin.write("velocity reload\n")
@@ -191,7 +247,11 @@ def start_server(server_id):
 
 
 def stop_server(server_id):
-    """停止 Minecraft 服务端"""
+    """
+    停止指定 ID 的 Minecraft 服务端。
+    策略：先通过 stdin 发送 "stop" 指令优雅关闭，
+    等待最多 10 秒，超时则强制 kill。
+    """
     global mc_process
     if server_id >= len(mc_process) or mc_process[server_id] is None:
         return "服务端未运行"
@@ -199,13 +259,12 @@ def stop_server(server_id):
         mc_process[server_id] = None
         return "服务端已经处于停止状态"
     try:
-        # 先尝试优雅关闭
+        # 优雅关闭：通过标准输入发送 stop 指令
         mc_process[server_id].stdin.write("stop\n")
         mc_process[server_id].stdin.flush()
-        # 等待最多 10 秒
         mc_process[server_id].wait(timeout=10)
     except subprocess.TimeoutExpired:
-        # 超时则强制杀死
+        # 超时则强制终止进程
         mc_process[server_id].kill()
         mc_process[server_id].wait()
     except Exception:
@@ -215,24 +274,38 @@ def stop_server(server_id):
 
 
 def restart_server(server_id):
-    """重启 Minecraft 服务端"""
+    """
+    重启指定 ID 的 Minecraft 服务端。
+    先停止，再启动，返回启动结果。
+    """
     msg = stop_server(server_id)
     if "已停止" in msg or "未运行" in msg:
         return start_server(server_id)
     return msg
 
-# ---- 数据库层 ----
-# 统一接口，根据配置自动切换 SQLite / MySQL
+# ============================================================
+# 三、数据库层 — 统一接口，自动切换 SQLite / MySQL
+# ============================================================
 
+# 根据 config.yml 选择数据库类型并获取路径/连接参数
 db_type = config['database']['type']
 db_path = config['database']['sqlite']['users_db'] if db_type == 'sqlite' else None
 servers_db_path = config['database']['sqlite']['servers_db'] if db_type == 'sqlite' else None
 
 def _hash_password(password):
+    """使用 Werkzeug 的 bcrypt 实现密码哈希，不可逆存储"""
     return generate_password_hash(password)
 
-# ---------- SQLite ----------
+
+# ---------- SQLite 实现 ----------
+
 def sqlite_ready(db_name=None):
+    """
+    初始化 SQLite 用户数据库。
+    创建 users 表（id, username, password_hash, if_admin, server_limit, servers），
+    兼容旧表结构自动添加缺失列，并确保默认 admin 账户存在。
+    同时初始化 servers 数据库和 Velocity（如启用）。
+    """
     if db_name is None:
         db_name = db_path
     conn = sqlite3.connect(db_name)
@@ -247,25 +320,28 @@ def sqlite_ready(db_name=None):
             servers TEXT
         )
     ''')
-    # 兼容旧表：添加 server_limit 列（如果不存在）
+    # 兼容性处理：旧表可能缺少 server_limit 列
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN server_limit INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
-        pass  # 列已存在
+        pass  # 列已存在，忽略错误
+    # 确保默认管理员用户 admin 存在（默认密码 123456）
     if not cursor.execute("SELECT * FROM users WHERE username='admin'").fetchone():
         _add_user_sqlite(db_name, 'admin', '123456', if_admin=1)
     conn.commit()
     cursor.close()
     conn.close()
 
-    # 初始化 servers 数据库并自动创建 Velocity 服务器
     _init_servers_db_sqlite()
     if is_velocity_enabled():
         init_velocity_server()
 
 
 def _init_servers_db_sqlite():
-    """创建/初始化服务器信息数据库 (servers.db)"""
+    """
+    创建/初始化 SQLite 服务器信息数据库 (servers.db)。
+    表结构：server_id, server_name, path, 内存配置, 核心类型, 端口
+    """
     conn = sqlite3.connect(servers_db_path)
     cursor = conn.cursor()
     cursor.execute('''
@@ -290,6 +366,7 @@ def _init_servers_db_sqlite():
 
 
 def _add_user_sqlite(db_name, username, password, if_admin=0):
+    """SQLite 版：向 users 表插入新用户"""
     password_hash = _hash_password(password)
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
@@ -306,6 +383,7 @@ def _add_user_sqlite(db_name, username, password, if_admin=0):
         conn.close()
 
 def _login_sqlite(db_name, username, password):
+    """SQLite 版：验证用户名密码，返回布尔值"""
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
     cursor.execute('SELECT password_hash FROM users WHERE username=?', (username,))
@@ -314,7 +392,8 @@ def _login_sqlite(db_name, username, password):
     conn.close()
     return bool(result and check_password_hash(result[0], password))
 
-# ---------- MySQL ----------
+# ---------- MySQL 实现 ----------
+
 _db_user = config['database']['mysql']['user']
 _db_pass = config['database']['mysql']['password']
 _db_host = config['database']['mysql']['host']
@@ -322,6 +401,11 @@ _db_port = config['database']['mysql']['port']
 _db_name_mysql = config['database']['mysql']['name']
 
 def mysql_ready():
+    """
+    初始化 MySQL 数据库连接。
+    自动创建数据库（如不存在）、建 users 表和 servers 表，
+    确保默认 admin 账户存在，兼容旧表结构。
+    """
     conn = pymysql.connect(host=_db_host, port=_db_port, user=_db_user, password=_db_pass)
     cursor = conn.cursor()
     cursor.execute(f"CREATE DATABASE IF NOT EXISTS {_db_name_mysql} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;")
@@ -336,7 +420,6 @@ def mysql_ready():
             servers TEXT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ''')
-    # 兼容旧表
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN server_limit INT DEFAULT 0")
     except Exception:
@@ -345,7 +428,6 @@ def mysql_ready():
     if not cursor.fetchone():
         _add_user_mysql('admin', '123456', if_admin=1)
 
-    # 创建 servers 表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS servers (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -357,7 +439,6 @@ def mysql_ready():
             server_core VARCHAR(255) DEFAULT ''
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ''')
-    # 兼容旧表：添加 server_port 列
     try:
         cursor.execute("ALTER TABLE servers ADD COLUMN server_port INT DEFAULT 0")
     except Exception:
@@ -370,11 +451,13 @@ def mysql_ready():
 
 
 def _init_servers_db_mysql():
-    """MySQL 版：创建 servers 表中的 Velocity 条目"""
+    """MySQL 版：如果启用了 Velocity，初始化 Velocity 服务器"""
     if is_velocity_enabled():
         init_velocity_server()
 
+
 def _add_user_mysql(username, password, if_admin=0):
+    """MySQL 版：向 users 表插入新用户"""
     password_hash = _hash_password(password)
     conn = pymysql.connect(host=_db_host, port=_db_port, user=_db_user, password=_db_pass, database=_db_name_mysql)
     cursor = conn.cursor()
@@ -389,7 +472,9 @@ def _add_user_mysql(username, password, if_admin=0):
         cursor.close()
         conn.close()
 
+
 def _login_mysql(username, password):
+    """MySQL 版：验证用户名密码，返回布尔值"""
     conn = pymysql.connect(host=_db_host, port=_db_port, user=_db_user, password=_db_pass, database=_db_name_mysql)
     cursor = conn.cursor()
     cursor.execute("SELECT password_hash FROM users WHERE username = %s", (username,))
@@ -398,15 +483,18 @@ def _login_mysql(username, password):
     conn.close()
     return bool(result and check_password_hash(result[0], password))
 
-# ---------- 统一暴露的接口 ----------
+
+# ---------- 统一暴露的接口（自动路由到 SQLite 或 MySQL） ----------
 
 def add_user(username, password, if_admin=0):
+    """添加新用户（自动选择数据库类型）"""
     if db_type == 'sqlite':
         _add_user_sqlite(db_path, username, password, if_admin)
     elif db_type == 'mysql':
         _add_user_mysql(username, password, if_admin)
 
 def login(username, password):
+    """验证用户登录（自动选择数据库类型）"""
     if db_type == 'sqlite':
         return _login_sqlite(db_path, username, password)
     elif db_type == 'mysql':
@@ -414,10 +502,15 @@ def login(username, password):
     return False
 
 
-# ========== 管理员数据库操作 ==========
+# ============================================================
+# 四、管理员数据库操作
+# ============================================================
 
 def check_admin(username):
-    """检查用户是否为管理员"""
+    """
+    检查用户是否为管理员。
+    读取 users 表中的 if_admin 字段，返回 True/False。
+    """
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(db_path)
@@ -440,7 +533,7 @@ def check_admin(username):
 
 
 def list_users():
-    """列出所有用户"""
+    """获取所有用户列表，用于管理员后台展示"""
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(db_path)
@@ -463,7 +556,10 @@ def list_users():
 
 
 def set_admin_status(username, is_admin):
-    """设置用户管理员状态"""
+    """
+    设置/取消用户的管理员权限。
+    不能修改自己的管理员状态（由调用方 main.py 检查）。
+    """
     val = 1 if is_admin else 0
     try:
         if db_type == 'sqlite':
@@ -487,7 +583,7 @@ def set_admin_status(username, is_admin):
 
 
 def reset_password(username, new_password):
-    """重置用户密码"""
+    """重置指定用户的密码（哈希后更新）"""
     ph = _hash_password(new_password)
     try:
         if db_type == 'sqlite':
@@ -511,7 +607,7 @@ def reset_password(username, new_password):
 
 
 def delete_user(username):
-    """删除用户"""
+    """从数据库中删除指定用户"""
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(db_path)
@@ -535,10 +631,15 @@ def delete_user(username):
         return False
 
 
-# ========== 服务器所有权 ==========
+# ============================================================
+# 五、服务器所有权管理
+# ============================================================
+# 服务器的"所有权"通过 users 表中的 servers 字段（JSON 数组）实现。
+# 例如：servers = "[1, 3, 5]" 表示该用户拥有服务器 #1、#3、#5。
+# 管理员可以访问所有服务器（绕过所有权检查）。
 
 def get_user_servers(username):
-    """获取用户拥有的服务器 ID 列表"""
+    """获取指定用户拥有的服务器 ID 列表（从 JSON 字段解析）"""
     import json
     try:
         if db_type == 'sqlite':
@@ -605,14 +706,18 @@ def remove_user_server(username, server_id):
 
 
 def check_server_owner(username, server_id):
-    """检查用户是否为服务器所有者"""
+    """
+    检查用户是否为服务器所有者。
+    管理员自动拥有所有服务器的访问权限。
+    """
     if check_admin(username):
-        return True  # 管理员可访问所有服务器
+        return True
     ids = get_user_servers(username)
     return server_id in ids
 
+
 def get_server_limit(username):
-    """获取用户的开服上限"""
+    """获取指定用户的开服上限（0 表示不可开服）"""
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(db_path)
@@ -635,7 +740,7 @@ def get_server_limit(username):
 
 
 def set_server_limit(username, limit):
-    """设置用户的开服上限"""
+    """设置指定用户的开服上限（仅管理员可调用）"""
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(db_path)
@@ -657,22 +762,31 @@ def set_server_limit(username, limit):
         return False
 
 
-# ========== Velocity 服务器系统 ==========
+# ============================================================
+# 六、Velocity 代理集成系统
+# ============================================================
+# Velocity 是一个高性能的 Minecraft 代理端，允许多个后端服务器
+# 共享同一个入口地址。HiveMC 将其作为特殊的 ID=0 服务器管理。
+# 功能包括：自动下载 velocity.jar、初始化目录结构、
+# 自动配置后端 server.properties、同步 velocity.toml 等。
 
 def is_velocity_enabled():
-    """检查是否启用了 Velocity 代理"""
+    """检查 config.yml 中是否启用了 Velocity 代理"""
     return config.get('velocity', {}).get('enable', False)
 
 
 def get_velocity_port():
-    """从 velocity.toml 解析 Velocity 代理端口"""
+    """
+    从 velocity.toml 中解析 Velocity 代理的监听端口。
+    解析 bind 配置项（格式如 bind = "0.0.0.0:25565"），
+    解析失败时返回默认端口 25565。
+    """
     toml_path = os.path.join(SERVER_DIR, '0', 'velocity.toml')
     try:
         with open(toml_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line.startswith('bind '):
-                    # bind = "0.0.0.0:25565"
                     parts = line.split('=')
                     if len(parts) >= 2:
                         val = parts[1].strip().strip('"').strip("'")
@@ -680,22 +794,32 @@ def get_velocity_port():
                         return int(port_str)
     except (FileNotFoundError, ValueError, IndexError):
         pass
-    return 25565  # fallback
+    return 25565  # 默认端口
 
 
 _VELOCITY_CORES = {'paper', 'folia', 'leaves'}
 
 def is_velocity_core(server_core):
-    """检查服务端核心是否支持 Velocity 代理连接"""
+    """
+    检查服务端核心是否支持 Velocity 代理连接。
+    目前支持：Paper、Folia、Leaves（需配置 proxy-protocol 和 forwarding.secret）
+    """
     return server_core.strip().lower() in _VELOCITY_CORES if server_core else False
 
 
 def init_velocity_server():
-    """初始化 Velocity 服务器（ID=0）的目录结构和数据库记录"""
+    """
+    初始化 Velocity 代理服务器（ID=0）。
+    执行步骤：
+      1. 创建 servers/0/ 目录
+      2. 从 PaperMC API 自动下载最新版 velocity.jar
+      3. 创建默认 start.txt 启动配置
+      4. 将 Velocity 信息写入 servers 数据库
+      5. 将后端服务器列表同步到 velocity.toml
+    """
     velocity_dir = os.path.join(SERVER_DIR, '0')
     os.makedirs(velocity_dir, exist_ok=True)
 
-    # 自动下载 velocity.jar
     download_velocity_jar(velocity_dir)
 
     start_txt = os.path.join(velocity_dir, 'start.txt')
@@ -705,14 +829,21 @@ def init_velocity_server():
     save_server_info(0, server_name='Velocity 代理', server_path=velocity_dir,
                      max_memory=512, min_memory=256, server_core='velocity', server_port=get_velocity_port())
 
-    # 同步后端服务器到 velocity.toml
     sync_velocity_toml_servers()
 
 
 _VELOCITY_API = "https://fill.papermc.io/v3/projects/velocity"
 
 def download_velocity_jar(target_dir):
-    """从 PaperMC API (v3) 自动下载最新版 Velocity JAR"""
+    """
+    从 PaperMC API v3 自动下载最新版 Velocity JAR 文件。
+    如果目标目录已存在 velocity.jar 则跳过下载。
+    下载流程：
+      1. 请求 API 获取最新版本号和构建号
+      2. 获取该构建的下载 URL
+      3. 流式下载到临时文件（同时输出进度百分比）
+      4. 下载完成后重命名为 velocity.jar
+    """
     jar_path = os.path.join(target_dir, 'velocity.jar')
     if os.path.exists(jar_path):
         print("✅ velocity.jar 已存在，跳过下载")
@@ -782,7 +913,11 @@ def download_velocity_jar(target_dir):
 
 
 def get_server_info(server_id):
-    """从 servers 数据库获取服务器信息"""
+    """
+    从 servers 数据库获取指定服务器的详细信息。
+    返回字典：{server_id, server_name, server_path, max_memory, min_memory, server_core, server_port}
+    查询失败或不存在时返回 None。
+    """
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(servers_db_path)
@@ -816,7 +951,11 @@ def get_server_info(server_id):
 
 
 def save_server_info(server_id, **kwargs):
-    """保存/更新服务器信息到 servers 数据库"""
+    """
+    保存/更新服务器信息到 servers 数据库。
+    可保存的字段由 allowed 集合限定，忽略不在允许列表中的参数。
+    如果记录已存在则 UPDATE，否则 INSERT。
+    """
     allowed = {'server_name', 'server_path', 'max_memory', 'min_memory', 'server_core', 'server_port'}
     data = {k: v for k, v in kwargs.items() if k in allowed}
     if not data:
@@ -853,7 +992,10 @@ def save_server_info(server_id, **kwargs):
 
 
 def delete_server_info(server_id):
-    """从 servers 数据库删除服务器信息（Velocity 服务器不可删除）"""
+    """
+    从 servers 数据库删除指定服务器的信息记录。
+    注意：Velocity 代理服务器（ID=0）不可删除。
+    """
     if server_id == 0:
         return False
     try:
@@ -877,7 +1019,7 @@ def delete_server_info(server_id):
 
 
 def get_all_servers_info():
-    """获取所有服务器信息"""
+    """获取 servers 数据库中的所有服务器信息列表（按 server_id 排序）"""
     try:
         if db_type == 'sqlite':
             conn = sqlite3.connect(servers_db_path)
@@ -963,15 +1105,20 @@ def ensure_server_properties(server_id):
 
 
 def _wait_and_fix_port(server_id):
-    """后台线程：确保 server.properties 端口正确"""
+    """
+    后台线程目标函数：确保 server.properties 中的端口与数据库一致。
+    在 Minecraft 启动前主动创建/修正端口，并在启动后再确认一次，
+    防止 Minecraft 使用默认端口（25565）覆盖掉自定义设置。
+    最大等待 60 秒。
+    """
     import time
     server_dir = os.path.join(os.getcwd(), SERVER_DIR, str(server_id))
     props_path = os.path.join(server_dir, 'server.properties')
 
-    # 主动创建/修正 server.properties（不等 Minecraft 生成）
+    # 不等 Minecraft 生成，主动写入正确的端口
     ensure_server_properties(server_id)
 
-    # 等 Minecraft 完全启动后再确认一次（防止被覆盖）
+    # 等 Minecraft 完全启动后再确认一次
     for _ in range(120):
         if os.path.exists(props_path):
             ensure_server_properties(server_id)
@@ -982,8 +1129,12 @@ def _wait_and_fix_port(server_id):
 
 
 def auto_configure_velocity_props(server_id):
-    """为 Paper/Folia/Leaves 服务端自动配置 Velocity 代理连接"""
-    # 先确保 server.properties 存在且端口正确
+    """
+    为 Paper/Folia/Leaves 服务端自动配置与 Velocity 代理兼容的 server.properties。
+    关键修改：
+      - online-mode = false（Velocity 代理模式下必须关闭正版验证）
+      - proxy-protocol = true（启用代理协议以传递真实客户端 IP）
+    """
     ensure_server_properties(server_id)
 
     server_dir = os.path.join(os.getcwd(), SERVER_DIR, str(server_id))
@@ -1000,7 +1151,6 @@ def auto_configure_velocity_props(server_id):
                 key, val = line.split('=', 1)
                 props[key.strip()] = val.strip()
 
-    # Velocity 代理配置
     if props.get('online-mode', 'true') != 'false':
         props['online-mode'] = 'false'
         modified = True
@@ -1012,11 +1162,17 @@ def auto_configure_velocity_props(server_id):
         with open(props_path, 'w', encoding='utf-8') as f:
             for key, val in props.items():
                 f.write(f"{key}={val}\n")
-        print(f"✅ 已为服务器 #{server_id} 配置 server.properties")
+        print(f"✅ 已为服务器 #{server_id} 配置 server.properties（Velocity 代理模式）")
 
 
 def _post_start_velocity_config(server_id):
-    """后台线程：等待 Paper/Folia/Leaves 生成 forwarding.secret，自动配置 paper-global.yml"""
+    """
+    后台线程目标函数：在 Paper/Folia/Leaves 首次启动后，
+    等待 forwarding.secret 文件生成，然后自动将密钥写入
+    config/paper-global.yml 的 proxies.velocity.secret 字段，
+    使后端服务器与 Velocity 代理之间的通信加密正常运作。
+    最长等待 60 秒。
+    """
     import time
     server_dir = os.path.join(os.getcwd(), SERVER_DIR, str(server_id))
     forwarding_secret_path = os.path.join(server_dir, 'forwarding.secret')
@@ -1066,7 +1222,15 @@ def _post_start_velocity_config(server_id):
 
 
 def sync_velocity_toml_servers():
-    """扫描所有普通服务器，自动更新 velocity.toml 的 [servers] 和 try 列表"""
+    """
+    扫描所有普通服务器（ID > 0），自动更新 velocity.toml 配置文件。
+    操作：
+      1. 收集所有后端服务器的内部地址（s1=127.0.0.1:30001, ...）
+      2. 移除 velocity.toml 中旧的 [servers] 段和 try 列表
+      3. 插入新的 [servers] 段和 try 列表
+      4. 插入到 [forced-hosts] 或 [advanced] 配置段之前
+    每次创建/删除服务器时自动调用此函数以保持配置同步。
+    """
     if not is_velocity_enabled():
         return
     toml_path = os.path.join(SERVER_DIR, '0', 'velocity.toml')

@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- ============================================================
+     login.html — HiveMC 登录页面
+     功能：用户名密码登录表单，登录成功跳转到用户后台
+     ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -8,13 +12,16 @@
 </head>
 <body class="login-body">
 
+    <!-- ======== 登录表单容器 ======== -->
     <div class="login-container">
         <div class="login-box">
+            <!-- 标题区域 -->
             <div class="login-header">
                 <h1>HiveMC</h1>
                 <p>登录到管理面板</p>
             </div>
 
+            <!-- Flash 消息通知（自动消失的 Toast） -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -23,6 +30,7 @@
                 {% endif %}
             {% endwith %}
 
+            <!-- 登录表单 -->
             <form method="POST" action="/login">
                 <div class="input-group">
                     <label>用户名</label>
@@ -35,6 +43,7 @@
                 <button type="submit" class="btn-submit">登录</button>
             </form>
             
+            <!-- 底部导航链接 -->
             <div class="login-footer">
                 <a href="/">返回首页</a>
                 <span style="margin: 0 8px; color: #ddd;">·</span>
@@ -44,17 +53,19 @@
     </div>
 
 <script>
-    // 自动消失的 Toast 通知
+    /**
+     * Toast 通知自动消失逻辑
+     * - 3 秒后自动淡出并移除
+     * - 点击可提前关闭
+     */
     document.addEventListener('DOMContentLoaded', function() {
         var toasts = document.querySelectorAll('.toast');
         toasts.forEach(function(toast) {
-            // 3 秒后自动淡出消失
             setTimeout(function() {
                 toast.style.transition = 'opacity 0.5s ease';
                 toast.style.opacity = '0';
                 setTimeout(function() { toast.remove(); }, 500);
             }, 3000);
-            // 点击立即关闭
             toast.addEventListener('click', function() {
                 toast.style.transition = 'opacity 0.3s ease';
                 toast.style.opacity = '0';

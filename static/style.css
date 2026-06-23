@@ -1,8 +1,9 @@
 /* =============================================
    HiveMC - 简约风格样式表
+   为整个 Web 面板提供统一的 UI 风格
    ============================================= */
 
-/* --- 全局设置 --- */
+/* --- 全局重置与基础样式 --- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -14,7 +15,7 @@ body {
 
 a { text-decoration: none; color: inherit; }
 
-/* --- 导航栏 --- */
+/* --- 顶部导航栏 --- */
 .navbar {
     display: flex;
     justify-content: space-between;

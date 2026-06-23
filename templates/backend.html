@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- ============================================================
+     backend.html — HiveMC 用户后台主页
+     功能：用户信息卡片、服务器数量/开服上限、服务器网格、公告列表
+     ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +12,7 @@
 </head>
 <body>
 
+    <!-- ======== 导航栏 ======== -->
     <nav class="navbar">
         <div class="logo">HiveMC</div>
         <div class="nav-right">
@@ -19,8 +24,10 @@
         </div>
     </nav>
 
+    <!-- ======== 主内容区 ======== -->
     <main class="dashboard">
 
+        <!-- 用户信息卡片 + 资产统计 -->
         <div class="dashboard-header">
             <div class="user-info-card">
                 <div class="user-avatar">{{ user.username[0]|upper }}</div>
@@ -41,6 +48,7 @@
             </div>
         </div>
 
+        <!-- 我的服务器列表 -->
         <section class="servers-section">
             <div class="section-header">
                 <h2>我的服务器</h2>

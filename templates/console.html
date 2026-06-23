@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- ============================================================
+     console.html — HiveMC 实时控制台页面
+     功能：启动/停止/重启服务器，实时查看控制台日志，发送指令
+     前端通过 AJAX 轮询获取日志和服务器状态（每 500ms / 5000ms）
+     ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +13,7 @@
 </head>
 <body>
 
+    <!-- ======== 导航栏 ======== -->
     <nav class="navbar">
         <div class="logo">HiveMC</div>
         <div class="nav-right">
@@ -17,7 +23,9 @@
         </div>
     </nav>
 
+    <!-- ======== 控制台主体 ======== -->
     <div class="console-container">
+        <!-- 控制台顶部工具栏 -->
         <div class="console-header">
             <div class="console-header-left">
                 <button id="btn-start" class="btn-action btn-start">启动</button>
@@ -27,8 +35,10 @@
             <span id="server-status" class="status-indicator">离线</span>
         </div>
 
+        <!-- 日志输出区域（实时滚动） -->
         <div id="console-logs" class="console-logs"></div>
 
+        <!-- 指令输入区域 -->
         <div class="console-input-area">
             <span class="prompt">&gt;</span>
             <input type="text" id="cmd-input" placeholder="输入指令..." autocomplete="on">
@@ -37,6 +47,11 @@
     </div>
 
     <script>
+        // ============================================================
+        // 控制台前端逻辑
+        // 功能：启停按钮控制、日志轮询、指令发送、状态检测
+        // ============================================================
+
         var SERVER_ID = "{{ server_id }}";
         var logContainer = document.getElementById('console-logs');
         var inputField = document.getElementById('cmd-input');

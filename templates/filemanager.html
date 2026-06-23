@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- ============================================================
+     filemanager.html — HiveMC 文件管理器页面
+     功能：双栏布局（左侧文件浏览器 + 右侧文本编辑器）
+     支持：新建/上传/重命名/删除/下载文件，文件夹打包 ZIP 下载
+     ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +13,7 @@
 </head>
 <body>
 
+    <!-- ======== 导航栏 ======== -->
     <nav class="navbar">
         <div class="logo">HiveMC</div>
         <div class="nav-right">
@@ -17,18 +23,22 @@
         </div>
     </nav>
 
+    <!-- ======== 文件管理器主容器（双栏布局） ======== -->
     <div class="fm-container">
+        <!-- 左侧：文件浏览器面板 -->
         <div class="fm-browser">
             <div class="fm-browser-header">
                 <span class="fm-title">文件浏览器</span>
                 <span class="fm-server-id">#{{ server_id }}</span>
             </div>
+            <!-- 工具栏 -->
             <div class="fm-toolbar">
                 <button class="fm-tb-btn" onclick="showCreateModal('file')">新建文件</button>
                 <button class="fm-tb-btn" onclick="showCreateModal('folder')">新建文件夹</button>
                 <button class="fm-tb-btn" onclick="document.getElementById('file-input').click()">上传文件</button>
                 <button class="fm-tb-btn" onclick="document.getElementById('folder-input').click()">上传文件夹</button>
                 <button class="fm-tb-btn fm-tb-download" id="btn-download-dir" onclick="downloadCurrentDir()">📦 打包下载</button>
+                <!-- 隐藏的文件选择器（用于上传触发） -->
                 <input type="file" id="file-input" multiple style="display:none">
                 <input type="file" id="folder-input" webkitdirectory multiple style="display:none">
             </div>
@@ -122,6 +132,10 @@
         </div>
     </div>
 
+    <!-- ============================================================
+    文件管理器前端 JavaScript 逻辑
+    功能：文件列表加载、目录导航、文本编辑器、重命名/删除/新建/上传/下载
+    ============================================================ -->
     <script>
         var SERVER_ID = {{ server_id }};
         var currentDir = '';

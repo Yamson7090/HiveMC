@@ -1,3 +1,17 @@
+# ============================================================
+# main.py — HiveMC Flask Web 应用主入口
+# ============================================================
+# 本模块负责定义所有 HTTP 路由和 JSON API，是用户与系统交互的"门面"。
+# 功能模块：
+#   - 用户认证（登录/注册/注销）
+#   - 权限控制（登录检查、管理员检查、服务器所有权校验）
+#   - 服务器控制（启停、重启、状态查询）
+#   - 控制台（实时日志轮询、指令发送）
+#   - 文件管理器（浏览/编辑/上传/下载/打包）
+#   - 管理员后台（用户管理、服务器管理）
+# ============================================================
+
+# ---- 第三方库导入 ----
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from datetime import datetime
 from functools import wraps
@@ -6,7 +20,7 @@ import os
 import io
 import zipfile
 
-# import definitions
+# ---- 从 definitions 导入核心功能 ----
 from definitions import load_config, load_announcements, start_server, stop_server, restart_server, output_queues, mc_process
 from definitions import sqlite_ready, mysql_ready, login, add_user
 from definitions import check_admin, list_users, set_admin_status, reset_password, delete_user
@@ -15,9 +29,13 @@ from definitions import get_user_servers, add_user_server, remove_user_server, c
 from definitions import SERVER_DIR
 from definitions import is_velocity_enabled, init_velocity_server, get_server_info, save_server_info, delete_server_info, get_all_servers_info, ensure_server_properties, get_velocity_port, sync_velocity_toml_servers
 
-# 读取配置文件
-config = load_config()
+# ============================================================
+# 初始化和配置
+# ============================================================
 
+config = load_config()  # 加载 config.yml
+
+# 根据配置初始化数据库（SQLite 或 MySQL）
 if config['database']['type'] == 'sqlite':
     sqlite_ready()
 elif config['database']['type'] == 'mysql':
@@ -26,17 +44,22 @@ else:
     print("❌ 错误：不支持的数据库类型，请检查配置文件中的 database.type 设置。")
     exit(1)
 
-# 初始化 Velocity 服务器（如启用）
+# 如启用了 Velocity 代理，初始化其目录结构和 JAR 下载
 if config.get('velocity', {}).get('enable', False):
     init_velocity_server()
 
+# Flask 应用初始化
 app = Flask(__name__)
 app.secret_key = config['server']['secret_key']
 server_port = config['server']['port']
-app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 * 1024  # 1GB 上传限制
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 * 1024  # 最大上传限制：1GB
 
-# ---- 登录验证装饰器 ----
+# ============================================================
+# 权限控制装饰器
+# ============================================================
+
 def login_required(f):
+    """页面装饰器：未登录用户重定向到登录页"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if session.get('username') is None:
@@ -46,6 +69,7 @@ def login_required(f):
     return decorated
 
 def json_login_required(f):
+    """API 装饰器：未登录用户返回 401 JSON 错误"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if session.get('username') is None:
@@ -54,8 +78,8 @@ def json_login_required(f):
     return decorated
 
 
-# ---- 管理员验证装饰器 ----
 def admin_required(f):
+    """页面装饰器：非管理员用户重定向到用户后台"""
     @wraps(f)
     def decorated(*args, **kwargs):
         username = session.get('username')
@@ -70,6 +94,7 @@ def admin_required(f):
 
 
 def json_admin_required(f):
+    """API 装饰器：非管理员用户返回 403 JSON 错误"""
     @wraps(f)
     def decorated(*args, **kwargs):
         username = session.get('username')
@@ -80,14 +105,18 @@ def json_admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ---- 辅助：取当前用户 ----
+
 def current_user():
+    """辅助函数：获取当前登录用户的用户名"""
     return {'username': session['username']}
 
 
-# ---- 服务器所有权校验 ----
 def require_server_owner(server_id):
-    """检查当前用户是否有权操作此服务器，无权限则返回错误响应"""
+    """
+    检查当前用户是否有权操作指定服务器。
+    如果不是所有者且不是管理员，返回 (JSON 错误响应, HTTP 状态码)。
+    通过检查则返回 None。
+    """
     username = session.get('username')
     if not username:
         return jsonify({'status': 'error', 'msg': '请先登录'}), 401
@@ -95,25 +124,31 @@ def require_server_owner(server_id):
         return jsonify({'status': 'error', 'msg': '无权操作此服务器'}), 403
     return None
 
+# ============================================================
+# 页面路由
+# ============================================================
+
 @app.route("/")
 def index():
-    # 检查是否登录
+    """
+    首页：显示欢迎信息。
+    已登录用户显示"欢迎回来"，未登录用户显示引导文字。
+    """
     current_user = session.get('username')
     if current_user is not None:
         flash(f"欢迎回来，{current_user}！", 'success')
     else:
         flash("欢迎访问 Minecraft 服务器控制面板！请登录以管理您的服务器。", 'info')
-    
-    '''
-    # 模拟服务器列表
-    active_servers = [
-        {"name": "阿明的生存服", "owner": "阿明", "status": "running", "server_id": "1"},
-        {"name": "PVP 竞技场", "owner": "大神K", "status": "stopped", "server_id": "2"},
-    ]'''
     return render_template('index.html', user=current_user, info=None)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
+    """
+    登录页面。
+    GET：显示登录表单
+    POST：验证用户名密码，成功则写入 session 并跳转后台
+    """
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -127,14 +162,19 @@ def login_page():
             
     return render_template('login.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register_page():
+    """
+    注册页面。
+    GET：显示注册表单
+    POST：验证输入合法性（非空、密码一致、密码长度>=6），写入数据库
+    """
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
-        # 验证输入
         if not username or not password:
             flash('用户名和密码不能为空', 'error')
             return render_template('register.html')
@@ -158,35 +198,47 @@ def register_page():
 
     return render_template('register.html')
 
+
 @app.route('/backend')
 @login_required
 def backend():
+    """
+    用户后台主页。
+    显示用户信息、服务器数量/开服上限、服务器网格、公告列表。
+    """
     user = current_user()
     username = session['username']
     is_admin = check_admin(username)
-    # 获取用户的开服上限和当前自己的服务器数量
     server_limit = get_server_limit(username)
     user_server_ids = get_user_servers(username)
     server_count = len(user_server_ids)
-    # 公告
     announcements = load_announcements()[:3]
 
     return render_template('backend.html', user=user, announcements=announcements, user_servers=[], is_admin=is_admin,
                            server_limit=server_limit, server_count=server_count)
 
+
 @app.route('/logout')
 def logout():
+    """退出登录：清除 session 中的用户名"""
     session.pop('username', None)
     flash('已退出登录', 'info')
     return redirect(url_for('index'))
 
+
 @app.route("/status")
 def status():
+    """简单健康检查接口，返回 'Server is running!'"""
     return "Server is running!"
+
 
 @app.route('/console', methods=['GET'])
 @login_required
 def console_page():
+    """
+    实时控制台页面。
+    显示指定服务器的控制台界面，支持启停和指令发送。
+    """
     user = current_user()
     server_id = int(request.args.get('server_id'))
     err = require_server_owner(server_id)
@@ -195,19 +247,24 @@ def console_page():
         return redirect(url_for('backend'))
     return render_template('console.html', server_id=server_id, user=user)
 
+# ============================================================
+# 服务器控制 API（启停/重启）
+# ============================================================
+
 @app.route('/api/start', methods=['POST'])
 @json_login_required
 def api_start():
+    """启动指定服务器，返回服务器 PID 或错误信息"""
     server_id = int(request.json.get('server_id'))
     err = require_server_owner(server_id)
     if err: return err
-    # 启动服务端接口
     msg = start_server(server_id=server_id)
     return jsonify({'status': 'success', 'msg': msg})
 
 @app.route('/api/stop', methods=['POST'])
 @json_login_required
 def api_stop():
+    """停止指定服务器（尝试优雅关闭，超时则强制 kill）"""
     server_id = int(request.json.get('server_id'))
     err = require_server_owner(server_id)
     if err: return err
@@ -217,16 +274,23 @@ def api_stop():
 @app.route('/api/restart', methods=['POST'])
 @json_login_required
 def api_restart():
+    """重启指定服务器（先停止再启动）"""
     server_id = int(request.json.get('server_id'))
     err = require_server_owner(server_id)
     if err: return err
     msg = restart_server(server_id)
     return jsonify({'status': 'success', 'msg': msg})
 
-# ==================== 服务器管理 API ====================
+# ============================================================
+# 服务器管理 API（列表/创建/删除/改名/状态查询）
+# ============================================================
 
 def scan_servers():
-    """扫描 servers/ 目录，返回服务器列表"""
+    """
+    扫描 servers/ 目录，返回所有服务器的状态列表。
+    每台服务器的信息包括：server_id, status, has_start_txt, name, server_port。
+    如果启用了 Velocity 代理，也会包含 ID=0 的代理服务器。
+    """
     servers_dir = SERVER_DIR
     if not os.path.isdir(servers_dir):
         return []
@@ -344,7 +408,11 @@ def api_create_server():
 @app.route('/api/server/delete', methods=['POST'])
 @json_login_required
 def api_delete_server():
-    """删除服务器（删除整个目录，不可恢复）"""
+    """
+    删除服务器。
+    流程：停止进程 → 清理队列 → 删除目录 → 移除所有权 → 同步 Velocity
+    注意：Velocity 代理服务器（ID=0）不可删除，删除不可恢复。
+    """
     server_id = int(request.json.get('server_id'))
     if server_id == 0:
         return jsonify({'status': 'error', 'msg': 'Velocity 代理服务器不可删除'}), 400
@@ -387,7 +455,7 @@ def api_delete_server():
 @app.route('/api/server/rename', methods=['POST'])
 @json_login_required
 def api_rename_server():
-    """重命名服务器"""
+    """重命名服务器（名称不能为空，最长 50 个字符）"""
     server_id = int(request.json.get('server_id'))
     new_name = (request.json.get('name') or '').strip()
     if not new_name:
@@ -455,12 +523,18 @@ def send_command():
         return jsonify({'status': 'error', 'msg': '服务端未运行，无法发送指令'})
 
 
-# ==================== 管理后台 ====================
+# ============================================================
+# 管理员后台 API（用户管理）
+# ============================================================
 
 @app.route('/admin', methods=['GET'])
 @admin_required
 def admin_page():
-    """管理后台页面"""
+    """
+    管理员后台页面。
+    显示所有服务器列表和用户管理表格。
+    仅管理员可访问。
+    """
     user = current_user()
     servers = scan_servers()
     return render_template('adminbackend.html', user=user, servers=servers)
@@ -533,10 +607,16 @@ def api_admin_set_limit():
                     'msg': f'用户 {username} 开服上限已设为 {limit}' if ok else '操作失败'})
 
 
-# ==================== 文件管理器 ====================
+# ============================================================
+# 文件管理器 API（浏览器/编辑/上传/下载/打包）
+# ============================================================
 
 def safe_join(server_id, relative_path=''):
-    """防止路径穿越攻击，确保路径在服务器目录内"""
+    """
+    安全路径拼接函数。
+    将用户请求的相对路径与服务器目录拼接，同时防止路径穿越攻击。
+    如果解析后的路径不在服务器目录范围内，返回 None。
+    """
     base = os.path.realpath(os.path.join(SERVER_DIR, str(server_id)))
     if not os.path.exists(base):
         os.makedirs(base)
@@ -608,7 +688,7 @@ def api_list_files():
 @app.route('/api/files/read', methods=['GET'])
 @json_login_required
 def api_read_file():
-    """读取文件内容（文本方式）"""
+    """读取指定文件的文本内容（仅支持 UTF-8 文本文件，二进制文件会返回错误）"""
     server_id = request.args.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -638,7 +718,7 @@ def api_read_file():
 @app.route('/api/files/write', methods=['POST'])
 @json_login_required
 def api_write_file():
-    """保存文件内容"""
+    """将内容写入指定文件（覆盖写入，UTF-8 编码）"""
     server_id = request.json.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -660,7 +740,7 @@ def api_write_file():
 @app.route('/api/files/rename', methods=['POST'])
 @json_login_required
 def api_rename_file():
-    """重命名文件或文件夹"""
+    """重命名文件或文件夹（新名称不能含路径分隔符）"""
     server_id = request.json.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -697,7 +777,7 @@ def api_rename_file():
 @app.route('/api/files/create', methods=['POST'])
 @json_login_required
 def api_create_file():
-    """新建文件"""
+    """在指定目录下创建一个新的空文件"""
     server_id = request.json.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -726,7 +806,7 @@ def api_create_file():
 @app.route('/api/files/mkdir', methods=['POST'])
 @json_login_required
 def api_create_folder():
-    """新建文件夹"""
+    """在指定目录下创建一个新的文件夹"""
     server_id = request.json.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -754,7 +834,7 @@ def api_create_folder():
 @app.route('/api/files/delete', methods=['POST'])
 @json_login_required
 def api_delete_file():
-    """删除文件或空文件夹"""
+    """删除文件或文件夹（文件夹会递归删除全部内容）"""
     server_id = request.json.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -782,7 +862,11 @@ def api_delete_file():
 @app.route('/api/files/upload', methods=['POST'])
 @json_login_required
 def api_upload_file():
-    """上传文件到服务器目录"""
+    """
+    上传文件到服务器目录。
+    支持单文件和多文件上传（包括文件夹结构）。
+    自动防止路径穿越，文件已存在时自动重命名（加数字后缀）。
+    """
     server_id = request.form.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -831,12 +915,14 @@ def api_upload_file():
         return jsonify({'status': 'error', 'msg': f'上传失败: {str(e)}'}), 500
 
 
-# ==================== 文件下载 ====================
+# ============================================================
+# 文件下载 API
+# ============================================================
 
 @app.route('/api/files/download', methods=['GET'])
 @json_login_required
 def api_download_file():
-    """下载单个文件"""
+    """下载单个文件（作为附件下载）"""
     server_id = request.args.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -857,7 +943,10 @@ def api_download_file():
 @app.route('/api/files/download_folder', methods=['GET'])
 @json_login_required
 def api_download_folder():
-    """打包下载文件夹（生成 ZIP）"""
+    """
+    打包下载整个文件夹。
+    在内存中生成 ZIP 文件，支持递归包含子文件夹。
+    """
     server_id = request.args.get('server_id')
     err = require_server_owner(int(server_id))
     if err: return err
@@ -869,14 +958,13 @@ def api_download_folder():
     if not os.path.isdir(full_path):
         return jsonify({'status': 'error', 'msg': '路径不是文件夹'}), 400
 
-    # 在内存中创建 ZIP
+    # 在内存中构建 ZIP 文件，避免写磁盘
     buf = io.BytesIO()
     folder_name = os.path.basename(full_path) or f'server_{server_id}'
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for root, dirs, files in os.walk(full_path):
             for file in files:
                 file_full = os.path.join(root, file)
-                # 计算相对路径（相对于打包的根目录）
                 rel_path = os.path.relpath(file_full, full_path)
                 zf.write(file_full, rel_path)
 
@@ -885,8 +973,10 @@ def api_download_folder():
 
 
 def main():
-    print("启动服务器，监听端口",server_port,"...")
+    """应用入口：启动 Flask 开发服务器"""
+    print("启动服务器，监听端口", server_port, "...")
     app.run(host='0.0.0.0', port=server_port, debug=False)
+
 
 if __name__ == "__main__":
     main()
