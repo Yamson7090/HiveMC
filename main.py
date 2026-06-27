@@ -347,12 +347,21 @@ def api_servers():
     """获取服务器列表"""
     username = session['username']
     all_servers = scan_servers()
-    if check_admin(username):
-        return jsonify({'status': 'success', 'servers': all_servers})
+    #if check_admin(username):
+    #    return jsonify({'status': 'success', 'servers': all_servers})
     # 非管理员只返回自己的服务器
     my_ids = set(get_user_servers(username))
     my_servers = [s for s in all_servers if s['server_id'] in my_ids]
     return jsonify({'status': 'success', 'servers': my_servers})
+
+@app.route('/api/servers_all', methods=['GET'])
+@json_login_required
+def api_servers_all():
+    """获取所有服务器列表"""
+    username = session['username']
+    all_servers = scan_servers()
+    if check_admin(username):
+        return jsonify({'status': 'success', 'servers': all_servers})
 
 @app.route('/api/server/create', methods=['POST'])
 @json_login_required

@@ -1,33 +1,36 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     backend.html — HiveMC 用户后台主页
+     backend.html — MCMAY Panel 用户后台主页（Miro 风格）
      功能：用户信息卡片、服务器数量/开服上限、服务器网格、公告列表
      ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>后台 - HiveMC</title>
+    <title>后台 — MCMAY Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <!-- ======== 导航栏 ======== -->
+    <!-- ======== 导航栏（Miro 白色导航 + 黄色 LOGO） ======== -->
     <nav class="navbar">
-        <div class="logo">HiveMC</div>
+        <div class="logo">
+            MCMAY
+            <span class="logo-sub">Panel</span>
+        </div>
         <div class="nav-right">
             <span class="welcome-text">{{ user.username }}</span>
             {% if is_admin %}
-            <a href="{{ url_for('admin_page') }}" class="btn-login">管理</a>
+            <a href="{{ url_for('admin_page') }}" class="btn btn-primary btn-sm">管理</a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">退出</a>
         </div>
     </nav>
 
     <!-- ======== 主内容区 ======== -->
     <main class="dashboard">
 
-        <!-- 用户信息卡片 + 资产统计 -->
+        <!-- 用户信息卡片 + 资产统计（Miro 卡片风格） -->
         <div class="dashboard-header">
             <div class="user-info-card">
                 <div class="user-avatar">{{ user.username[0]|upper }}</div>
@@ -48,17 +51,18 @@
             </div>
         </div>
 
-        <!-- 我的服务器列表 -->
+        <!-- 我的服务器列表（Miro: 卡片网格） -->
         <section class="servers-section">
             <div class="section-header">
                 <h2>我的服务器</h2>
-                <button id="btn-create-server" class="btn-create-server">+ 新建</button>
+                <button id="btn-create-server" class="btn btn-primary btn-sm">+ 新建</button>
             </div>
             <div class="server-grid" id="server-grid">
                 <div class="fm-loading">加载中...</div>
             </div>
         </section>
 
+        <!-- 公告（Miro: 简洁列表卡片） -->
         <section class="announcements-section">
             <h2>公告</h2>
             <div class="announcement-list">
@@ -76,7 +80,7 @@
 
     </main>
 
-    <!-- 删除服务器确认弹窗 -->
+    <!-- 删除服务器确认弹窗（Miro 风格模态框） -->
     <div class="fm-modal-overlay" id="delete-server-modal" style="display:none;">
         <div class="fm-modal">
             <div class="fm-modal-header">
@@ -84,18 +88,18 @@
                 <button class="fm-modal-close" onclick="closeModal('delete-server-modal')">&times;</button>
             </div>
             <div class="fm-modal-body">
-                <p style="color:#e74c3c; font-weight:500; margin-bottom:12px;">此操作不可撤销，所有文件将被永久删除。</p>
-                <p style="font-size:0.85rem; color:#888; margin-bottom:12px;">请输入 <strong id="delete-server-name-confirm" style="color:#e74c3c;"></strong> 确认删除：</p>
+                <p style="color:var(--color-coral-dark); font-weight:500; margin-bottom:12px;">此操作不可撤销，所有文件将被永久删除。</p>
+                <p style="font-size:14px; color:var(--color-slate); margin-bottom:12px;">请输入 <strong id="delete-server-name-confirm" style="color:var(--color-coral-dark);"></strong> 确认删除：</p>
                 <input type="text" id="delete-server-confirm-input" class="fm-modal-input" placeholder="输入服务器名称确认">
             </div>
             <div class="fm-modal-footer">
                 <button class="fm-btn fm-btn-cancel" onclick="closeModal('delete-server-modal')">取消</button>
-                <button class="fm-btn" id="btn-confirm-delete-server" style="background:#e74c3c; color:#fff; border-color:#e74c3c;" onclick="confirmDeleteServer()" disabled>确认删除</button>
+                <button class="fm-btn fm-btn-delete" id="btn-confirm-delete-server" onclick="confirmDeleteServer()" disabled>确认删除</button>
             </div>
         </div>
     </div>
 
-    <!-- 创建服务器确认弹窗 -->
+    <!-- 创建服务器弹窗 -->
     <div class="fm-modal-overlay" id="create-server-modal" style="display:none;">
         <div class="fm-modal">
             <div class="fm-modal-header">
@@ -103,8 +107,8 @@
                 <button class="fm-modal-close" onclick="closeServerModal()">&times;</button>
             </div>
             <div class="fm-modal-body">
-                <p style="color:#555; margin-bottom:12px;">系统将自动分配 ID 并创建默认启动文件。</p>
-                <p style="font-size:0.82rem; color:#999;">位置: servers/{id}/</p>
+                <p style="color:var(--color-slate); margin-bottom:12px;">系统将自动分配 ID 并创建默认启动文件。</p>
+                <p style="font-size:13px; color:var(--color-muted);">位置: servers/{id}/</p>
             </div>
             <div class="fm-modal-footer">
                 <button class="fm-btn fm-btn-cancel" onclick="closeServerModal()">取消</button>
@@ -154,7 +158,7 @@
             const grid = document.getElementById('server-grid');
 
             if (servers.length === 0) {
-                grid.innerHTML = '<div class="fm-empty" style="grid-column:1/-1; padding:60px 20px; text-align:center; color:#999;">还没有服务器，点击右上角新建一个</div>';
+                grid.innerHTML = '<div class="fm-empty" style="grid-column:1/-1;">还没有服务器，点击右上角新建一个</div>';
                 return;
             }
 
@@ -164,18 +168,18 @@
                 html += '<div class="server-card">' +
                     '<div class="card-header">' +
                         '<span class="status-dot ' + s.status + '"></span>' +
-                        '<span class="server-name" onclick="showRenameModal(' + s.server_id + ', \'' + escapeAttr(s.name) + '\')" title="点击改名">' + escapeHtml(s.name) + '</span>' +
+                        '<span class="server-name" onclick="showRenameModal(' + s.server_id + ', \'' + escapeAttr(s.name) + '\')">' + escapeHtml(s.name) + '</span>' +
                     '</div>' +
                     '<div class="card-body">' +
-                        '<p>ID: <span class="version-text">#' + s.server_id + '</span></p>' +
-                        '<p>端口: <span class="version-text">' + s.server_port + '</span></p>' +
+                        '<p>ID: #' + s.server_id + '</p>' +
+                        '<p>端口: ' + s.server_port + '</p>' +
                         '<p>状态: <span class="status-badge ' + s.status + '">' + (running ? '运行中' : '已停止') + '</span></p>' +
                     '</div>' +
                     '<div class="card-footer">' +
-                        '<button class="btn-manage" onclick="gotofilemanager(' + s.server_id + ')">文件</button>' +
-                        '<button class="btn-console" onclick="gotoconsole(' + s.server_id + ')">控制台</button>' +
-                        '<button class="btn-rename-server" onclick="event.stopPropagation(); showRenameModal(' + s.server_id + ', \'' + escapeAttr(s.name) + '\')">改名</button>' +
-                        '<button class="btn-delete-server" onclick="showDeleteServerModal(' + s.server_id + ')">删除</button>' +
+                        '<button onclick="gotofilemanager(' + s.server_id + ')">文件</button>' +
+                        '<button onclick="gotoconsole(' + s.server_id + ')">控制台</button>' +
+                        '<button onclick="event.stopPropagation(); showRenameModal(' + s.server_id + ', \'' + escapeAttr(s.name) + '\')">改名</button>' +
+                        '<button onclick="showDeleteServerModal(' + s.server_id + ')" style="color:var(--color-coral-dark);border-color:var(--color-coral-dark);">删除</button>' +
                     '</div></div>';
             });
 
@@ -279,12 +283,14 @@
 
         function showToast(msg, type) {
             var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;top:20px;right:20px;padding:10px 20px;border-radius:8px;font-size:0.85rem;z-index:9999;';
-            t.style.background = type === 'success' ? '#3498db' : '#e74c3c';
-            t.style.color = '#fff';
+            t.className = 'toast toast-' + type;
             t.textContent = msg;
             document.body.appendChild(t);
-            setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 3000);
+            setTimeout(function() {
+                t.style.transition = 'opacity 0.5s ease';
+                t.style.opacity = '0';
+                setTimeout(function() { t.remove(); }, 500);
+            }, 3000);
         }
 
         let renameServerId = null;

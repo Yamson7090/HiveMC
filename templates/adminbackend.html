@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     adminbackend.html — HiveMC 管理员后台页面
-     功能：
-       - 查看所有服务器列表
-       - 用户管理表格（切换管理员、重置密码、设置开服上限、删除用户）
+     adminbackend.html — MCMAY Panel 管理员后台（Miro 风格）
+     功能：查看所有服务器 + 用户管理表格（切换管理员、重置密码、设置开服上限、删除用户）
      仅 admin 权限用户可访问
      ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理 - HiveMC</title>
+    <title>管理 — MCMAY Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <!-- ======== 导航栏 ======== -->
+    <!-- ======== 导航栏（Miro 白色导航 + 黄色 LOGO） ======== -->
     <nav class="navbar">
-        <div class="logo">HiveMC</div>
+        <div class="logo">
+            MCMAY
+            <span class="logo-sub">Panel</span>
+        </div>
         <div class="nav-right">
             <span class="welcome-text">{{ user.username }}</span>
-            <a href="{{ url_for('backend') }}" class="btn-login">用户后台</a>
-            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+            <a href="{{ url_for('backend') }}" class="btn btn-primary btn-sm">用户后台</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">退出</a>
         </div>
     </nav>
 
     <!-- ======== 主内容区 ======== -->
     <main class="dashboard">
 
-        <!-- 所有服务器列表 -->
+        <!-- 所有服务器列表（Miro 卡片网格） -->
         <section class="servers-section">
             <div class="section-header">
                 <h2>所有服务器</h2>
@@ -38,7 +39,7 @@
             </div>
         </section>
 
-        <!-- 用户管理表格 -->
+        <!-- 用户管理表格（Miro 风格表格） -->
         <section class="servers-section">
             <div class="section-header">
                 <h2>用户管理</h2>
@@ -71,13 +72,13 @@
                 <button class="fm-modal-close" onclick="closeModal('delete-server-modal')">&times;</button>
             </div>
             <div class="fm-modal-body">
-                <p style="color:#e74c3c; font-weight:500; margin-bottom:12px;">此操作不可撤销，所有文件将被永久删除。</p>
-                <p style="font-size:0.85rem; color:#888; margin-bottom:12px;">请输入 <strong id="delete-server-name-confirm" style="color:#e74c3c;"></strong> 确认删除：</p>
+                <p style="color:var(--color-coral-dark); font-weight:500; margin-bottom:12px;">此操作不可撤销，所有文件将被永久删除。</p>
+                <p style="font-size:14px; color:var(--color-slate); margin-bottom:12px;">请输入 <strong id="delete-server-name-confirm" style="color:var(--color-coral-dark);"></strong> 确认删除：</p>
                 <input type="text" id="delete-server-confirm-input" class="fm-modal-input" placeholder="输入服务器名称确认">
             </div>
             <div class="fm-modal-footer">
                 <button class="fm-btn fm-btn-cancel" onclick="closeModal('delete-server-modal')">取消</button>
-                <button class="fm-btn" id="btn-confirm-delete-server" style="background:#e74c3c; color:#fff; border-color:#e74c3c;" onclick="confirmDeleteServer()" disabled>确认删除</button>
+                <button class="fm-btn fm-btn-delete" id="btn-confirm-delete-server" onclick="confirmDeleteServer()" disabled>确认删除</button>
             </div>
         </div>
     </div>
@@ -90,7 +91,7 @@
                 <button class="fm-modal-close" onclick="closeModal('reset-pwd-modal')">&times;</button>
             </div>
             <div class="fm-modal-body">
-                <p style="color:#666; margin-bottom:8px;">用户：<strong id="reset-pwd-user" style="color:#3498db;"></strong></p>
+                <p style="color:var(--color-slate); margin-bottom:8px;">用户：<strong id="reset-pwd-user" style="color:var(--color-brand-blue);"></strong></p>
                 <label>新密码：</label>
                 <input type="password" id="reset-pwd-input" class="fm-modal-input" placeholder="至少 6 位">
             </div>
@@ -102,6 +103,7 @@
     </div>
 
     <script>
+        /* eslint-disable */
         var resetPwdTarget = null;
 
         function loadUsers() {
@@ -241,25 +243,25 @@
         function loadAdminServers() {
             var grid = document.getElementById('admin-server-grid');
 
-            fetch('/api/servers')
+            fetch('/api/servers_all')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.status === 'error') { grid.innerHTML = '<div class="fm-error">' + data.msg + '</div>'; return; }
-                    if (data.servers.length === 0) { grid.innerHTML = '<div class="fm-empty" style="padding:40px;text-align:center;color:#999;">暂无服务器</div>'; return; }
+                    if (data.servers.length === 0) { grid.innerHTML = '<div class="fm-empty">暂无服务器</div>'; return; }
                     var html = '';
                     data.servers.forEach(function(s) {
                         var running = s.status === 'running';
                         html += '<div class="server-card">' +
                             '<div class="card-header"><span class="status-dot ' + s.status + '"></span><span class="server-name">' + escapeHtml(s.name) + '</span></div>' +
                             '<div class="card-body">' +
-                                '<p>ID: <span class="version-text">#' + s.server_id + '</span></p>' +
+                                '<p>ID: #' + s.server_id + '</p>' +
                                 '<p>启动脚本: ' + (s.has_start_txt ? '就绪' : '缺失') + '</p>' +
                                 '<p>状态: <span class="status-badge ' + s.status + '">' + (running ? '运行中' : '已停止') + '</span></p>' +
                             '</div>' +
                             '<div class="card-footer">' +
-                                '<button class="btn-manage" onclick="gotofilemanager(' + s.server_id + ')">文件</button>' +
-                                '<button class="btn-console" onclick="gotoconsole(' + s.server_id + ')">控制台</button>' +
-                                '<button class="btn-delete-server" onclick="showDeleteServerModal(' + s.server_id + ')">删除</button>' +
+                                '<button onclick="gotofilemanager(' + s.server_id + ')">文件</button>' +
+                                '<button onclick="gotoconsole(' + s.server_id + ')">控制台</button>' +
+                                '<button onclick="showDeleteServerModal(' + s.server_id + ')" style="color:var(--color-coral-dark);border-color:var(--color-coral-dark);">删除</button>' +
                             '</div></div>';
                     });
                     grid.innerHTML = html;
@@ -323,12 +325,14 @@
 
         function showToast(msg, type) {
             var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;top:20px;right:20px;padding:10px 20px;border-radius:8px;font-size:0.85rem;z-index:9999;';
-            t.style.background = type === 'success' ? '#3498db' : '#e74c3c';
-            t.style.color = '#fff';
+            t.className = 'toast toast-' + type;
             t.textContent = msg;
             document.body.appendChild(t);
-            setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 3000);
+            setTimeout(function() {
+                t.style.transition = 'opacity 0.5s ease';
+                t.style.opacity = '0';
+                setTimeout(function() { t.remove(); }, 500);
+            }, 3000);
         }
 
         loadUsers();

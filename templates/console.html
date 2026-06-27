@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     console.html — HiveMC 实时控制台页面
+     console.html — MCMAY Panel 实时控制台（Miro 风格）
      功能：启动/停止/重启服务器，实时查看控制台日志，发送指令
      前端通过 AJAX 轮询获取日志和服务器状态（每 500ms / 5000ms）
      ============================================================ -->
@@ -8,29 +8,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>控制台 - HiveMC</title>
+    <title>控制台 — MCMAY Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <!-- ======== 导航栏 ======== -->
+    <!-- ======== 导航栏（Miro 白色导航 + 黄色 LOGO） ======== -->
     <nav class="navbar">
-        <div class="logo">HiveMC</div>
+        <div class="logo">
+            MCMAY
+            <span class="logo-sub">Panel</span>
+        </div>
         <div class="nav-right">
             <span class="welcome-text">{{ user.username }}</span>
-            <a href="{{ url_for('backend') }}" class="btn-login">返回</a>
-            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+            <a href="{{ url_for('backend') }}" class="btn btn-primary btn-sm">返回</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">退出</a>
         </div>
     </nav>
 
-    <!-- ======== 控制台主体 ======== -->
+    <!-- ======== 控制台主体（Miro 风格容器） ======== -->
     <div class="console-container">
         <!-- 控制台顶部工具栏 -->
         <div class="console-header">
             <div class="console-header-left">
-                <button id="btn-start" class="btn-action btn-start">启动</button>
-                <button id="btn-stop" class="btn-action btn-stop" disabled>停止</button>
-                <button id="btn-restart" class="btn-action btn-restart" disabled>重启</button>
+                <button id="btn-start" class="btn btn-start">启动</button>
+                <button id="btn-stop" class="btn btn-stop" disabled>停止</button>
+                <button id="btn-restart" class="btn btn-restart" disabled>重启</button>
             </div>
             <span id="server-status" class="status-indicator">离线</span>
         </div>
@@ -47,11 +50,7 @@
     </div>
 
     <script>
-        // ============================================================
-        // 控制台前端逻辑
-        // 功能：启停按钮控制、日志轮询、指令发送、状态检测
-        // ============================================================
-
+        /* eslint-disable */
         var SERVER_ID = "{{ server_id }}";
         var logContainer = document.getElementById('console-logs');
         var inputField = document.getElementById('cmd-input');

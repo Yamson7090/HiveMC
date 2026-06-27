@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     register.html — HiveMC 注册页面
-     功能：新用户注册表单，含输入合法性校验（非空/密码一致/长度>=6）
+     register.html — MCMAY Panel 注册页（Miro 风格）
+     功能：新用户注册表单，含输入合法性校验
      ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>注册 - HiveMC</title>
+    <title>注册 — MCMAY Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="login-body">
 
-    <!-- ======== 注册表单容器 ======== -->
+    <!-- ======== 注册表单容器（Miro: 居中白色卡片） ======== -->
     <div class="login-container">
         <div class="login-box">
             <!-- 标题区域 -->
             <div class="login-header">
-                <h1>HiveMC</h1>
+                <div class="logo">MCMAY</div>
                 <p>创建新账户</p>
             </div>
 
@@ -30,7 +30,7 @@
                 {% endif %}
             {% endwith %}
 
-            <!-- 注册表单（含确认密码） -->
+            <!-- 注册表单 -->
             <form method="POST" action="/register">
                 <div class="input-group">
                     <label>用户名</label>
@@ -56,9 +56,7 @@
 
 <script>
     /**
-     * Toast 通知自动消失逻辑（同 login.html）
-     * - 3 秒后自动淡出移除
-     * - 点击可提前关闭
+     * Toast 通知自动消失逻辑
      */
     document.addEventListener('DOMContentLoaded', function() {
         var toasts = document.querySelectorAll('.toast');

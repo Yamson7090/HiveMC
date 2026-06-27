@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     filemanager.html — HiveMC 文件管理器页面
+     filemanager.html — MCMAY Panel 文件管理器（Miro 风格）
      功能：双栏布局（左侧文件浏览器 + 右侧文本编辑器）
      支持：新建/上传/重命名/删除/下载文件，文件夹打包 ZIP 下载
      ============================================================ -->
@@ -8,18 +8,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件管理 - HiveMC</title>
+    <title>文件管理 — MCMAY Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <!-- ======== 导航栏 ======== -->
+    <!-- ======== 导航栏（Miro 白色导航 + 黄色 LOGO） ======== -->
     <nav class="navbar">
-        <div class="logo">HiveMC</div>
+        <div class="logo">
+            MCMAY
+            <span class="logo-sub">Panel</span>
+        </div>
         <div class="nav-right">
             <span class="welcome-text">{{ user.username }}</span>
-            <a href="{{ url_for('backend') }}" class="btn-login">返回</a>
-            <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+            <a href="{{ url_for('backend') }}" class="btn btn-primary btn-sm">返回</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">退出</a>
         </div>
     </nav>
 
@@ -33,12 +36,12 @@
             </div>
             <!-- 工具栏 -->
             <div class="fm-toolbar">
-                <button class="fm-tb-btn" onclick="showCreateModal('file')">新建文件</button>
-                <button class="fm-tb-btn" onclick="showCreateModal('folder')">新建文件夹</button>
+                <button class="fm-tb-btn" onclick="showCreateModal('file')">+ 新建文件</button>
+                <button class="fm-tb-btn" onclick="showCreateModal('folder')">+ 新建文件夹</button>
                 <button class="fm-tb-btn" onclick="document.getElementById('file-input').click()">上传文件</button>
                 <button class="fm-tb-btn" onclick="document.getElementById('folder-input').click()">上传文件夹</button>
                 <button class="fm-tb-btn fm-tb-download" id="btn-download-dir" onclick="downloadCurrentDir()">📦 打包下载</button>
-                <!-- 隐藏的文件选择器（用于上传触发） -->
+                <!-- 隐藏的文件选择器 -->
                 <input type="file" id="file-input" multiple style="display:none">
                 <input type="file" id="folder-input" webkitdirectory multiple style="display:none">
             </div>
@@ -50,6 +53,7 @@
             </div>
         </div>
 
+        <!-- 右侧编辑器 -->
         <div class="fm-editor">
             <div class="fm-editor-header">
                 <span class="fm-editor-title" id="fm-editor-title">未选择文件</span>
@@ -118,25 +122,39 @@
     <div class="fm-modal-overlay" id="delete-modal" style="display:none;">
         <div class="fm-modal">
             <div class="fm-modal-header">
-                <span style="color:#e74c3c;">确认删除</span>
+                <span style="color:var(--color-coral-dark);">确认删除</span>
                 <button class="fm-modal-close" onclick="closeModal('delete-modal')">&times;</button>
             </div>
             <div class="fm-modal-body">
-                <p style="color:#555; margin-bottom:12px;">确定要删除以下文件吗？此操作不可撤销。</p>
+                <p style="color:var(--color-slate); margin-bottom:12px;">确定要删除以下文件吗？此操作不可撤销。</p>
                 <p class="fm-old-name" id="delete-target-name"></p>
             </div>
             <div class="fm-modal-footer">
                 <button class="fm-btn fm-btn-cancel" onclick="closeModal('delete-modal')">取消</button>
-                <button class="fm-btn" style="background:#e74c3c; color:#fff; border-color:#e74c3c;" onclick="confirmDelete()">确认删除</button>
+                <button class="fm-btn fm-btn-delete" onclick="confirmDelete()">确认删除</button>
             </div>
         </div>
     </div>
 
-    <!-- ============================================================
-    文件管理器前端 JavaScript 逻辑
-    功能：文件列表加载、目录导航、文本编辑器、重命名/删除/新建/上传/下载
-    ============================================================ -->
+    <!-- 打包下载进度弹窗 -->
+    <div class="fm-modal-overlay" id="download-progress-modal" style="display:none;">
+        <div class="fm-modal fm-progress-modal">
+            <div class="fm-modal-header">
+                <span>打包下载</span>
+            </div>
+            <div class="fm-modal-body fm-progress-body">
+                <div class="fm-progress-icon" id="progress-icon">📦</div>
+                <p class="fm-progress-text" id="progress-text">正在打包文件...</p>
+                <div class="fm-progress-track">
+                    <div class="fm-progress-bar" id="progress-bar"></div>
+                </div>
+                <p class="fm-progress-hint" id="progress-hint">根据文件夹大小可能需要几秒到几分钟</p>
+            </div>
+        </div>
+    </div>
+
     <script>
+        /* eslint-disable */
         var SERVER_ID = {{ server_id }};
         var currentDir = '';
         var currentFile = null;
@@ -604,23 +622,6 @@
 
         loadFileList('');
     </script>
-
-    <!-- 打包下载进度弹窗 -->
-    <div class="fm-modal-overlay" id="download-progress-modal" style="display:none;">
-        <div class="fm-modal fm-progress-modal">
-            <div class="fm-modal-header">
-                <span>打包下载</span>
-            </div>
-            <div class="fm-modal-body fm-progress-body">
-                <div class="fm-progress-icon" id="progress-icon">📦</div>
-                <p class="fm-progress-text" id="progress-text">正在打包文件...</p>
-                <div class="fm-progress-track">
-                    <div class="fm-progress-bar" id="progress-bar"></div>
-                </div>
-                <p class="fm-progress-hint" id="progress-hint">根据文件夹大小可能需要几秒到几分钟</p>
-            </div>
-        </div>
-    </div>
 
 </body>
 </html>

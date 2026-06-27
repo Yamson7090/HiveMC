@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     login.html — HiveMC 登录页面
+     login.html — MCMAY Panel 登录页（Miro 风格）
      功能：用户名密码登录表单，登录成功跳转到用户后台
      ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - HiveMC</title>
+    <title>登录 — MCMAY Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="login-body">
 
-    <!-- ======== 登录表单容器 ======== -->
+    <!-- ======== 登录表单容器（Miro: 居中白色卡片） ======== -->
     <div class="login-container">
         <div class="login-box">
             <!-- 标题区域 -->
             <div class="login-header">
-                <h1>HiveMC</h1>
+                <div class="logo">MCMAY</div>
                 <p>登录到管理面板</p>
             </div>
 
@@ -46,7 +46,7 @@
             <!-- 底部导航链接 -->
             <div class="login-footer">
                 <a href="/">返回首页</a>
-                <span style="margin: 0 8px; color: #ddd;">·</span>
+                <span class="dot-sep">·</span>
                 <a href="/register">注册账户</a>
             </div>
         </div>
@@ -55,8 +55,6 @@
 <script>
     /**
      * Toast 通知自动消失逻辑
-     * - 3 秒后自动淡出并移除
-     * - 点击可提前关闭
      */
     document.addEventListener('DOMContentLoaded', function() {
         var toasts = document.querySelectorAll('.toast');

@@ -1,50 +1,59 @@
 <!DOCTYPE html>
 <!-- ============================================================
-     index.html — HiveMC 首页/欢迎页
+     index.html — MCMAY Panel 首页（Miro 风格）
      功能：展示欢迎信息，根据登录状态显示不同按钮
      ============================================================ -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HiveMC - Minecraft 服务器管理</title>
+    <title>MCMAY Panel — Minecraft 服务器管理</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <!-- ======== 导航栏 ======== -->
+    <!-- ======== 导航栏（Miro 白色导航 + 黄色 LOGO） ======== -->
     <nav class="navbar">
-        <div class="logo">HiveMC</div>
+        <div class="logo">
+            MCMAY
+            <span class="logo-sub">Panel</span>
+        </div>
         <div class="nav-right">
             {% if user %}
-                <!-- 已登录：显示用户名和退出按钮 -->
                 <span class="welcome-text">{{ user }}</span>
-                <a href="{{ url_for('logout') }}" class="btn-logout">退出</a>
+                <a href="{{ url_for('backend') }}" class="btn btn-primary btn-sm">后台</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">退出</a>
             {% else %}
-                <!-- 未登录：显示登录按钮 -->
-                <a href="{{ url_for('login_page') }}" class="btn-login">登录</a>
+                <a href="{{ url_for('login_page') }}" class="btn btn-primary btn-sm">登录</a>
+                <a href="{{ url_for('register_page') }}" class="btn btn-secondary btn-sm">注册</a>
             {% endif %}
         </div>
     </nav>
 
-    <!-- ======== 英雄区域（欢迎横幅） ======== -->
+    <!-- ======== 英雄区域（Miro: 80px 标题 + 白色画布 + 操作按钮） ======== -->
     <header class="hero">
-        <div class="hero-content">
-            <h1>Minecraft 服务器管理面板</h1>
-            <p>管理你的 Minecraft 服务器，随时随地。</p>
-            <div class="actions">
-                {% if user %}
-                    <a href="{{ url_for('backend') }}" class="btn-primary">进入后台</a>
-                {% else %}
-                    <a href="{{ url_for('login_page') }}" class="btn-primary">开始使用</a>
-                {% endif %}
-            </div>
+        <h1>Minecraft<br>服务器管理面板</h1>
+        <p class="hero-subtitle">管理你的 Minecraft 服务器，随时随地。简洁、高效、开箱即用。</p>
+        <div class="actions">
+            {% if user %}
+                <a href="{{ url_for('backend') }}" class="btn btn-primary">进入后台</a>
+            {% else %}
+                <a href="{{ url_for('login_page') }}" class="btn btn-primary">开始使用</a>
+                <a href="{{ url_for('register_page') }}" class="btn btn-secondary">创建账户</a>
+            {% endif %}
+        </div>
+        <!-- 模拟 Miro 风格的白板演示区域 -->
+        <div class="hero-mockup">
+            <span>MCMAY Panel · 服务器管理界面预览</span>
         </div>
     </header>
 
-    <!-- ======== 页脚 ======== -->
+    <!-- ======== 页脚（Miro: 深色底部区域） ======== -->
     <footer>
-        <p>HiveMC</p>
+        <div class="footer-bottom">
+            <div class="logo">MCMAY</div>
+            <span class="footer-bottom-text">© 2026 MCMAY Panel. All rights reserved.</span>
+        </div>
     </footer>
 
 </body>
